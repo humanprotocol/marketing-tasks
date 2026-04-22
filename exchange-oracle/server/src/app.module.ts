@@ -1,0 +1,60 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { AppController } from './app.controller';
+import { envValidator } from './common/config';
+import { EnvConfigModule } from './common/config/config.module';
+import { ExceptionFilter } from './common/exceptions/exception.filter';
+import { JwtHttpStrategy } from './common/guards/strategy';
+import { SnakeCaseInterceptor } from './common/interceptors/snake-case';
+import { TransformEnumInterceptor } from './common/interceptors/transform-enum.interceptor';
+import { DatabaseModule } from './database/database.module';
+import { AssignmentModule } from './modules/assignment/assignment.module';
+import { HealthModule } from './modules/health/health.module';
+import { JobModule } from './modules/job/job.module';
+import { StatsModule } from './modules/stats/stats.module';
+import { Web3Module } from './modules/web3/web3.module';
+import { WebhookModule } from './modules/webhook/webhook.module';
+import { HttpValidationPipe } from './common/pipes';
+import Environment from './common/utils/environment';
+
+@Module({
+  providers: [
+    {
+      provide: APP_PIPE,
+      useClass: HttpValidationPipe,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: SnakeCaseInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TransformEnumInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: ExceptionFilter,
+    },
+    JwtHttpStrategy,
+  ],
+  imports: [
+    HealthModule,
+    AssignmentModule,
+    JobModule,
+    WebhookModule,
+    Web3Module,
+    StatsModule,
+    ConfigModule.forRoot({
+      /**
+       * First value found takes precendece
+       */
+      envFilePath: [`.env.${Environment.name}`, '.env.local', '.env'],
+      validationSchema: envValidator,
+    }),
+    DatabaseModule,
+    EnvConfigModule,
+  ],
+  controllers: [AppController],
+})
+export class AppModule {}

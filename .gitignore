@@ -1,0 +1,17 @@
+.vscode
+.DS_Store
+node_modules
+
+# Modern Yarn files
+.pnp.*
+.yarn/*
+!.yarn/.gitkeep
+!.yarn/cache
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Ignore developer-only local files
+.local

@@ -1,0 +1,52 @@
+import { ConfigService } from '@nestjs/config';
+import { INestApplication } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { json, urlencoded } from 'body-parser';
+import { useContainer } from 'class-validator';
+import helmet from 'helmet';
+
+import logger, { nestLoggerOverride } from './logger';
+import { AppModule } from './app.module';
+import { ServerConfigService } from './common/config/server-config.service';
+
+async function bootstrap() {
+  const app = await NestFactory.create<INestApplication>(AppModule, {
+    cors: true,
+    logger: nestLoggerOverride,
+  });
+
+  const configService: ConfigService = app.get(ConfigService);
+  const serverConfigService = new ServerConfigService(configService);
+
+  const host = serverConfigService.host;
+  const port = serverConfigService.port;
+
+  app.enableCors({
+    origin: true,
+    credentials: true,
+    exposedHeaders: ['Content-Disposition'],
+  });
+
+  useContainer(app.select(AppModule), { fallbackOnErrors: true });
+
+  app.use(json({ limit: '5mb' }));
+  app.use(urlencoded({ limit: '5mb', extended: true }));
+
+  const config = new DocumentBuilder()
+    .addBearerAuth()
+    .setTitle('Social Media Promotion Recording Oracle API')
+    .setDescription('Swagger Social Media Promotion Recording Oracle API')
+    .setVersion('1.0')
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('swagger', app, document);
+
+  app.use(helmet());
+
+  await app.listen(port, host, async () => {
+    logger.info(`API server is running on http://${host}:${port}`);
+  });
+}
+
+void bootstrap();

@@ -1,0 +1,18 @@
+import { Injectable } from '@nestjs/common';
+import { DataSource } from 'typeorm';
+
+import { BaseRepository } from '../../database/base.repository';
+
+import { CronJobType } from './constants';
+import { CronJobEntity } from './cron-job.entity';
+
+@Injectable()
+export class CronJobRepository extends BaseRepository<CronJobEntity> {
+  constructor(dataSource: DataSource) {
+    super(CronJobEntity, dataSource);
+  }
+
+  findOneByType(cronJobType: CronJobType): Promise<CronJobEntity | null> {
+    return this.findOne({ where: { cronJobType } });
+  }
+}

@@ -1,0 +1,104 @@
+import { EscrowUtils } from '@human-protocol/sdk';
+import {
+  CanActivate,
+  ExecutionContext,
+  HttpException,
+  HttpStatus,
+  Injectable,
+} from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { ethers } from 'ethers';
+
+import { AssignmentRepository } from '../../modules/assignment/assignment.repository';
+import { HEADER_SIGNATURE_KEY } from '../constant';
+import {
+  ErrorAssignment,
+  ErrorEscrow,
+  ErrorSignature,
+} from '../constant/errors';
+import { AuthSignatureRole } from '../enums/role';
+import { AuthError, ValidationError } from '../errors';
+import { verifySignature } from '../utils/signature';
+
+@Injectable()
+export class SignatureAuthGuard implements CanActivate {
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly assignmentRepository: AssignmentRepository,
+  ) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const roles = this.reflector.get<AuthSignatureRole[]>(
+      'roles',
+      context.getHandler(),
+    );
+    if (!roles) throw new Error(ErrorSignature.MissingRoles);
+
+    const request = context.switchToHttp().getRequest();
+    const data = request.body;
+
+    const signature = request.headers[HEADER_SIGNATURE_KEY];
+    const oracleAdresses: string[] = [];
+
+    if (roles.includes(AuthSignatureRole.Worker)) {
+      if (!Number.isInteger(Number(data.assignment_id))) {
+        throw new HttpException(
+          'Invalid assignment id',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const assignment = await this.assignmentRepository.findOneById(
+        data.assignment_id,
+      );
+      if (assignment) {
+        oracleAdresses.push(assignment.workerAddress);
+      } else {
+        throw new ValidationError(ErrorAssignment.NotFound);
+      }
+    } else {
+      if (!data.chain_id || !ethers.isAddress(data.escrow_address)) {
+        throw new HttpException('Invalid payload', HttpStatus.BAD_REQUEST);
+      }
+
+      const escrowData = await EscrowUtils.getEscrow(
+        data.chain_id,
+        data.escrow_address,
+      );
+      if (!escrowData) {
+        throw new ValidationError(ErrorEscrow.NotFound);
+      }
+
+      if (roles.includes(AuthSignatureRole.JobLauncher)) {
+        oracleAdresses.push(escrowData.launcher);
+      }
+
+      if (
+        roles.includes(AuthSignatureRole.Recording) &&
+        escrowData.recordingOracle
+      ) {
+        oracleAdresses.push(escrowData.recordingOracle);
+      }
+
+      if (
+        roles.includes(AuthSignatureRole.Reputation) &&
+        escrowData.reputationOracle
+      ) {
+        oracleAdresses.push(escrowData.reputationOracle);
+      }
+    }
+
+    let isVerified = false;
+    try {
+      isVerified = verifySignature(data, signature, oracleAdresses);
+    } catch {
+      // noop
+    }
+
+    if (!isVerified) {
+      throw new AuthError('Unauthorized');
+    }
+
+    return true;
+  }
+}

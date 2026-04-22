@@ -1,0 +1,30 @@
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+
+@Injectable()
+export class ServerConfigService {
+  constructor(private configService: ConfigService) {}
+
+  /**
+   * The hostname or IP address on which the server will run.
+   * Default: 'localhost'
+   */
+  get host(): string {
+    return this.configService.get<string>('HOST', 'localhost');
+  }
+
+  /**
+   * The port number on which the server will listen for incoming connections.
+   * Default: 5000
+   */
+  get port(): number {
+    return +this.configService.get<number>('PORT', 5002);
+  }
+
+  get socialMediaValidationMaxRetries(): number {
+    return +this.configService.get<number>(
+      'SOCIAL_MEDIA_VALIDATION_MAX_RETRIES',
+      96,
+    );
+  }
+}
