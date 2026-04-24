@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
-
 import {
   ErrorJob,
   ErrorSubmission,
   SubmissionRejectionReason,
 } from '../../common/constants/errors';
-import { SubmissionStatus } from '../../common/enums/submission';
+import {
+  SubmissionStatus,
+  VerificationResult,
+} from '../../common/enums/submission';
 import { ValidationError } from '../../common/errors';
 import {
   IExchangeSolution,
@@ -13,9 +15,9 @@ import {
   IManifest,
   IRecordingResult,
 } from '../../common/interfaces/job';
+import { GrokService } from '../../modules/grok/grok.service';
 import { JobService } from '../../modules/job/job.service';
 import { StorageService } from '../../modules/storage/storage.service';
-import { GrokService } from '../../modules/grok/grok.service';
 import {
   SolutionEventData,
   SubmissionEventData,
@@ -100,7 +102,7 @@ export class SubmissionService {
         finalResult = {
           workerAddress: submission.workerAddress,
           postUrl: submission.postUrl,
-          status: SubmissionStatus.REJECTED,
+          verificationResult: VerificationResult.REJECTED,
           rejectionReason: SubmissionRejectionReason.InvalidPostValidation,
         };
       } else {
@@ -110,20 +112,20 @@ export class SubmissionService {
           finalResult = {
             workerAddress: submission.workerAddress,
             postUrl: submission.postUrl,
-            status: SubmissionStatus.REJECTED,
+            verificationResult: VerificationResult.REJECTED,
             rejectionReason,
           };
         } else {
           finalResult = {
             workerAddress: submission.workerAddress,
             postUrl: submission.postUrl,
-            status: SubmissionStatus.ACCEPTED,
+            verificationResult: VerificationResult.ACCEPTED,
           };
         }
       }
 
       submission.status =
-        finalResult.status === SubmissionStatus.ACCEPTED
+        finalResult.verificationResult === VerificationResult.ACCEPTED
           ? SubmissionStatus.ACCEPTED
           : SubmissionStatus.REJECTED;
       submission.reason = finalResult.rejectionReason ?? null;

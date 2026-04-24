@@ -4,15 +4,55 @@ import { GrokConfigService } from '../../common/config/grok-config.service';
 import { ErrorJob } from '../../common/constants/errors';
 import { ServerError } from '../../common/errors';
 import { IGrokValidationResult, IManifest } from '../../common/interfaces/job';
+import {
+  buildGrokValidationPrompt,
+  GROK_VALIDATION_RESPONSE_SCHEMA,
+  GROK_VALIDATION_SYSTEM_PROMPT,
+} from './grok-prompt';
 
-interface GrokChatCompletionResponse {
-  choices?: Array<{
-    message?: {
-      content?: string | null;
-    };
+interface GrokResponsesApiResponse {
+  output?: Array<{
+    type?: string;
+    content?: Array<{
+      type?: string;
+      text?: string;
+    }>;
   }>;
   error?: {
     message?: string;
+  };
+}
+
+function extractResponsesText(payload: GrokResponsesApiResponse): string {
+  const message = payload.output?.find((item) => item.type === 'message');
+  const text = message?.content?.find((item) => item.type === 'output_text');
+
+  return text?.text ?? '';
+}
+
+function normalizeValidationResult(
+  validation: IGrokValidationResult,
+  manifest: IManifest,
+): IGrokValidationResult {
+  const requirements = manifest.requirements;
+
+  return {
+    ...validation,
+    hasRequiredHashtags:
+      !requirements.required_hashtags?.length || validation.hasRequiredHashtags,
+    hasRequiredKeywords:
+      !requirements.required_keywords?.length || validation.hasRequiredKeywords,
+    hasRequiredLink: !requirements.required_link || validation.hasRequiredLink,
+    meetsMinLength: !requirements.min_length || validation.meetsMinLength,
+    hasRequiredMedia:
+      !requirements.requires_media || validation.hasRequiredMedia,
+    meetsMinFollowers:
+      !requirements.min_followers || validation.meetsMinFollowers,
+    meetsMinAccountAgeDays:
+      !requirements.min_account_age_days || validation.meetsMinAccountAgeDays,
+    meetsMinLiveDurationHours:
+      !requirements.min_live_duration_hours ||
+      validation.meetsMinLiveDurationHours,
   };
 }
 
@@ -30,7 +70,7 @@ export class GrokService {
     }
 
     const response = await fetch(
-      `${this.grokConfigService.baseUrl}/chat/completions`,
+      `${this.grokConfigService.baseUrl}/responses`,
       {
         method: 'POST',
         headers: {
@@ -39,23 +79,32 @@ export class GrokService {
         },
         body: JSON.stringify({
           model: this.grokConfigService.model,
-          stream: false,
-          messages: [
+          store: false,
+          max_output_tokens: 60,
+          input: [
             {
               role: 'system',
-              content:
-                'You validate X posts for marketing campaigns and return only valid JSON.',
+              content: GROK_VALIDATION_SYSTEM_PROMPT,
             },
             {
               role: 'user',
-              content: this.buildPrompt(postUrl, manifest),
+              content: buildGrokValidationPrompt(postUrl, manifest),
             },
           ],
+          tools: [{ type: 'x_search' }],
+          text: {
+            format: {
+              type: 'json_schema',
+              name: GROK_VALIDATION_RESPONSE_SCHEMA.json_schema.name,
+              schema: GROK_VALIDATION_RESPONSE_SCHEMA.json_schema.schema,
+              strict: true,
+            },
+          },
         }),
       },
     );
 
-    const payload = (await response.json()) as GrokChatCompletionResponse;
+    const payload = (await response.json()) as GrokResponsesApiResponse;
 
     if (!response.ok) {
       throw new ServerError(
@@ -64,64 +113,15 @@ export class GrokService {
       );
     }
 
-    const responseText = payload.choices?.[0]?.message?.content ?? '';
+    const responseText = extractResponsesText(payload);
 
     try {
-      return JSON.parse(responseText) as IGrokValidationResult;
+      return normalizeValidationResult(
+        JSON.parse(responseText) as IGrokValidationResult,
+        manifest,
+      );
     } catch {
       return null;
     }
-  }
-
-  private buildPrompt(postUrl: string, manifest: IManifest): string {
-    const requirements = manifest.requirements;
-    const requiredHashtags = requirements.required_hashtags ?? [];
-    const requiredKeywords = requirements.required_keywords ?? [];
-
-    return `Analyze this X post URL for marketing campaign validation: ${postUrl}
-
-Campaign name: ${manifest.campaign.name}
-Campaign description: ${manifest.campaign.description}
-
-Validate all of the following:
-- post exists
-- post is public
-- required hashtags present: ${requiredHashtags.join(', ') || 'none'}
-- required keywords present: ${requiredKeywords.join(', ') || 'none'}
-- required link present: ${requirements.required_link || 'none'}
-- minimum text length met: ${requirements.min_length ?? 0}
-- media present if required: ${requirements.requires_media ?? false}
-- minimum followers met: ${requirements.min_followers ?? 0}
-- minimum account age in days met: ${requirements.min_account_age_days ?? 0}
-- minimum live duration in hours met: ${requirements.min_live_duration_hours ?? 0}
-
-Also analyze potential bot or inorganic repost activity using these indicators:
-1. Timing patterns: Are reposts clustered in suspiciously short time windows?
-2. Account characteristics: Do reposting accounts show signs of being bots?
-3. Engagement ratios: Is the repost count disproportionate to likes or replies?
-4. Content patterns: Are there coordinated amplification signals?
-5. Network analysis: Do reposting accounts have suspicious follower/following overlap?
-
-During your analysis:
-- Do not consider crypto related activity as risky.
-- Include relevant numbers or examples you can infer.
-
-Respond with a JSON object in this exact format:
-{
-  "postExists": boolean,
-  "isPublic": boolean,
-  "hasRequiredHashtags": boolean,
-  "hasRequiredKeywords": boolean,
-  "hasRequiredLink": boolean,
-  "meetsMinLength": boolean,
-  "hasRequiredMedia": boolean,
-  "meetsMinFollowers": boolean,
-  "meetsMinAccountAgeDays": boolean,
-  "meetsMinLiveDurationHours": boolean,
-  "overallBotProbability": "low" | "medium" | "high",
-  "summary": "Brief explanation of your analysis and recommendation"
-}
-
-Return ONLY the JSON object, no additional text.`;
   }
 }

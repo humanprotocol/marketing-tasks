@@ -5,7 +5,10 @@ import { ethers } from 'ethers';
 import { Web3ConfigService } from '../../common/config/web3-config.service';
 import { ErrorCommon, ErrorJob } from '../../common/constants/errors';
 import { JobRequestType, JobStatus } from '../../common/enums/job';
-import { SubmissionStatus } from '../../common/enums/submission';
+import {
+  SubmissionStatus,
+  VerificationResult,
+} from '../../common/enums/submission';
 import { EventType, WebhookStatus } from '../../common/enums/webhook';
 import { ConflictError, ValidationError } from '../../common/errors';
 import { IManifest, IRecordingResult } from '../../common/interfaces/job';
@@ -93,7 +96,7 @@ export class JobService {
     }
 
     const acceptedCount = allResults.filter(
-      (result) => result.status === SubmissionStatus.ACCEPTED,
+      (result) => result.verificationResult === VerificationResult.ACCEPTED,
     ).length;
     const reservedAmount =
       (escrow.totalFundedAmount / BigInt(submissionsRequired)) *

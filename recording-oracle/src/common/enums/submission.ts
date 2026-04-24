@@ -4,3 +4,8 @@ export enum SubmissionStatus {
   REJECTED = 'rejected',
   FAILED = 'failed',
 }
+
+export enum VerificationResult {
+  ACCEPTED = 'accepted',
+  REJECTED = 'rejected',
+}

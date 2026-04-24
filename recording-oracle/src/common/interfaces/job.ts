@@ -1,7 +1,7 @@
 import { JobRequestType } from '../enums/job';
+import { VerificationResult } from '../enums/submission';
 
 export type AbuseProbability = 'low' | 'medium' | 'high';
-export type SubmissionDecisionStatus = 'accepted' | 'rejected';
 
 export interface IManifestRequirements {
   required_hashtags?: string[];
@@ -49,7 +49,7 @@ export interface IExchangeSolutionsFile {
 export interface IRecordingResult {
   workerAddress: string;
   postUrl: string;
-  status: SubmissionDecisionStatus;
+  verificationResult: VerificationResult;
   rejectionReason?: string;
 }
 
@@ -64,6 +64,6 @@ export interface IGrokValidationResult {
   meetsMinFollowers: boolean;
   meetsMinAccountAgeDays: boolean;
   meetsMinLiveDurationHours: boolean;
+  followerAuthenticity: AbuseProbability;
   overallBotProbability: AbuseProbability;
-  summary: string;
 }
