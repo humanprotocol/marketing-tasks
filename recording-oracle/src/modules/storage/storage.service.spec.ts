@@ -7,6 +7,7 @@ import {
 } from '@human-protocol/sdk';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import { VerificationResult } from '../../common/enums/submission';
 import {
   MOCK_ADDRESS,
   MOCK_FILE_URL,
@@ -119,7 +120,7 @@ describe('StorageService', () => {
       const jobSolution = {
         workerAddress,
         postUrl,
-        status: 'accepted' as const,
+        verificationResult: VerificationResult.ACCEPTED,
       };
       const fileData = await storageService.uploadJobSolutions(
         escrowAddress,
@@ -156,7 +157,7 @@ describe('StorageService', () => {
       const jobSolution = {
         workerAddress,
         postUrl,
-        status: 'accepted' as const,
+        verificationResult: VerificationResult.ACCEPTED,
       };
       await expect(
         storageService.uploadJobSolutions(escrowAddress, chainId, [
@@ -181,7 +182,7 @@ describe('StorageService', () => {
       const jobSolution = {
         workerAddress,
         postUrl,
-        status: 'accepted' as const,
+        verificationResult: VerificationResult.ACCEPTED,
       };
 
       await expect(
@@ -206,7 +207,7 @@ describe('StorageService', () => {
       const jobSolution = {
         workerAddress,
         postUrl,
-        status: 'accepted' as const,
+        verificationResult: VerificationResult.ACCEPTED,
       };
       await expect(
         storageService.uploadJobSolutions(escrowAddress, chainId, [

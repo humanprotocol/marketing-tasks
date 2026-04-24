@@ -36,7 +36,8 @@ export const MOCK_S3_USE_SSL = false;
 export const MOCK_MANIFEST: IManifest = {
   submissions_required: 2,
   job_type: JobRequestType.SOCIAL_MEDIA_PROMOTION,
-  end_date: '2030-01-01T00:00:00.000Z',
+  end_date: Date.parse('2030-01-01T00:00:00.000Z'),
+  platforms: ['x'],
   campaign: {
     name: 'BrandX Launch Campaign',
     description: 'Promote BrandX on X.',
