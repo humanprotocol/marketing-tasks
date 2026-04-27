@@ -80,6 +80,10 @@ export class AssignmentService {
       jobEntity.manifestUrl,
     );
 
+    if (currentAssignments >= manifest.submissions_required) {
+      throw new ValidationError(ErrorAssignment.FullyAssigned);
+    }
+
     const jobEndDate = new Date(manifest.end_date);
     const requiredLiveDurationMs =
       (manifest.requirements.min_live_duration_hours ?? 0) * 60 * 60 * 1000;
@@ -87,10 +91,6 @@ export class AssignmentService {
       throw new ValidationError(
         ErrorAssignment.InsufficientTimeForLiveDuration,
       );
-    }
-
-    if (currentAssignments >= manifest.submissions_required) {
-      throw new ValidationError(ErrorAssignment.FullyAssigned);
     }
 
     // Check if all required qualifications are present
