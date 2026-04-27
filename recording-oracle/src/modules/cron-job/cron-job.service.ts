@@ -52,15 +52,21 @@ export class CronJobService {
   }
 
   @Cron('*/2 * * * *')
-  async processEndedJobs(): Promise<void> {
-    if (await this.isCronJobRunning(CronJobType.ProcessEndedJobs)) {
+  async processJobsAfterSubmissionDeadline(): Promise<void> {
+    if (
+      await this.isCronJobRunning(
+        CronJobType.ProcessJobsAfterSubmissionDeadline,
+      )
+    ) {
       return;
     }
 
-    const cronJob = await this.startCronJob(CronJobType.ProcessEndedJobs);
+    const cronJob = await this.startCronJob(
+      CronJobType.ProcessJobsAfterSubmissionDeadline,
+    );
 
     try {
-      const jobs = await this.jobService.getEndedJobs();
+      const jobs = await this.jobService.getJobsAfterSubmissionDeadline();
 
       for (const job of jobs) {
         try {
@@ -80,7 +86,7 @@ export class CronJobService {
             allResults.push(result);
           }
 
-          await this.jobService.finalizeJobResults(
+          await this.jobService.storeResults(
             job,
             manifest.submissions_required,
             allResults,
@@ -91,12 +97,18 @@ export class CronJobService {
             EventType.JOB_COMPLETED,
           );
         } catch (error) {
-          this.logger.error('Error processing ended job', error);
+          this.logger.error(
+            'Error processing job after submission deadline',
+            error,
+          );
           await this.jobService.handleProcessingError(job);
         }
       }
     } catch (error) {
-      this.logger.error('Error processing ended jobs', error);
+      this.logger.error(
+        'Error processing jobs after submission deadline',
+        error,
+      );
     }
 
     await this.completeCronJob(cronJob);

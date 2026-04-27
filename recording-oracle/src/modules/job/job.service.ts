@@ -5,10 +5,7 @@ import { ethers } from 'ethers';
 import { Web3ConfigService } from '../../common/config/web3-config.service';
 import { ErrorCommon, ErrorJob } from '../../common/constants/errors';
 import { JobRequestType, JobStatus } from '../../common/enums/job';
-import {
-  SubmissionStatus,
-  VerificationResult,
-} from '../../common/enums/submission';
+import { VerificationResult } from '../../common/enums/submission';
 import { EventType, WebhookStatus } from '../../common/enums/webhook';
 import { ConflictError, ValidationError } from '../../common/errors';
 import { IManifest, IRecordingResult } from '../../common/interfaces/job';
@@ -61,8 +58,8 @@ export class JobService {
     return await this.jobRepository.createUnique(job);
   }
 
-  getEndedJobs(): Promise<JobEntity[]> {
-    return this.jobRepository.findReadyToFinalize(new Date());
+  getJobsAfterSubmissionDeadline(): Promise<JobEntity[]> {
+    return this.jobRepository.findAfterSubmissionDeadline(new Date());
   }
 
   async handleProcessingError(job: JobEntity): Promise<void> {
@@ -73,7 +70,7 @@ export class JobService {
     await this.jobRepository.updateOne(job);
   }
 
-  async finalizeJobResults(
+  async storeResults(
     job: JobEntity,
     submissionsRequired: number,
     allResults: IRecordingResult[],

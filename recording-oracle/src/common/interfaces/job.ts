@@ -53,7 +53,7 @@ export interface IRecordingResult {
   rejectionReason?: string;
 }
 
-export interface IGrokValidationResult {
+export interface IPostValidationResult {
   postExists: boolean;
   isPublic: boolean;
   hasRequiredHashtags: boolean;

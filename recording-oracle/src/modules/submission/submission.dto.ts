@@ -1,5 +1,5 @@
 import { SubmissionRejectionReason } from '../../common/constants/errors';
-import { IGrokValidationResult, IManifest } from '../../common/interfaces/job';
+import { IManifest, IPostValidationResult } from '../../common/interfaces/job';
 
 export class SaveSolutionsDto {
   public url: string;
@@ -7,6 +7,6 @@ export class SaveSolutionsDto {
 }
 
 export type SubmissionValidationRule = {
-  isValid: (validation: IGrokValidationResult, manifest: IManifest) => boolean;
+  isValid: (validation: IPostValidationResult, manifest: IManifest) => boolean;
   rejectionReason: SubmissionRejectionReason;
 };

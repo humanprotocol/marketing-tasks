@@ -1,9 +1,7 @@
 import { ChainId } from '@human-protocol/sdk';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
-import { MAINNET_CHAIN_IDS, TESTNET_CHAIN_IDS } from '../../common/constant';
 import { ErrorWeb3 } from '../../common/constant/errors';
-import { Web3Env } from '../../common/enums/web3';
 import { Web3Service } from './web3.service';
 import { MOCK_PRIVATE_KEY, mockConfig } from './../../../test/constants';
 import { Web3ConfigService } from '../../common/config/web3-config.service';
@@ -11,8 +9,7 @@ import { NetworkConfigService } from '../../common/config/network-config.service
 
 describe('Web3Service', () => {
   let web3Service: Web3Service;
-  let web3ConfigService: Web3ConfigService;
-  let configService: ConfigService;
+  let networkConfigService: NetworkConfigService;
 
   jest
     .spyOn(Web3ConfigService.prototype, 'privateKey', 'get')
@@ -40,24 +37,19 @@ describe('Web3Service', () => {
     }).compile();
 
     web3Service = moduleRef.get<Web3Service>(Web3Service);
-    web3ConfigService = moduleRef.get<Web3ConfigService>(Web3ConfigService);
-    configService = moduleRef.get<ConfigService>(ConfigService);
+    networkConfigService =
+      moduleRef.get<NetworkConfigService>(NetworkConfigService);
   });
 
   describe('getSigner', () => {
-    it('should return a signer for a valid chainId on TESTNET', () => {
-      jest.spyOn(configService, 'get').mockImplementation((key: string) => {
-        if (key === 'WEB3_ENV') return Web3Env.TESTNET;
-        return mockConfig[key];
-      });
-
+    it('should return a signer for a configured chainId', () => {
       const validChainId = ChainId.POLYGON_AMOY;
 
       const signer = web3Service.getSigner(validChainId);
       expect(signer).toBeDefined();
     });
 
-    it('should throw invalid chain id provided for the testnet environment', () => {
+    it('should throw invalid chain id provided for configured networks', () => {
       const invalidChainId = ChainId.POLYGON;
 
       expect(() => web3Service.getSigner(invalidChainId)).toThrow(
@@ -67,20 +59,27 @@ describe('Web3Service', () => {
   });
 
   describe('getValidChains', () => {
-    it('should get all valid chainIds on MAINNET', () => {
-      jest
-        .spyOn(web3ConfigService, 'env', 'get')
-        .mockReturnValue(Web3Env.MAINNET);
+    it('should get chainIds from configured networks', () => {
       const validChainIds = web3Service.getValidChains();
-      expect(validChainIds).toBe(MAINNET_CHAIN_IDS);
+      expect(validChainIds).toEqual([ChainId.POLYGON_AMOY]);
     });
 
-    it('should get all valid chainIds on TESTNET', () => {
+    it('should reflect network config changes', () => {
       jest
-        .spyOn(web3ConfigService, 'env', 'get')
-        .mockReturnValue(Web3Env.TESTNET);
+        .spyOn(networkConfigService, 'networks', 'get')
+        .mockReturnValue([
+          {
+            chainId: ChainId.POLYGON,
+            rpcUrl: 'http://polygon-rpc.url',
+          },
+          {
+            chainId: ChainId.BSC_MAINNET,
+            rpcUrl: 'http://bsc-rpc.url',
+          },
+        ]);
+
       const validChainIds = web3Service.getValidChains();
-      expect(validChainIds).toBe(TESTNET_CHAIN_IDS);
+      expect(validChainIds).toEqual([ChainId.POLYGON, ChainId.BSC_MAINNET]);
     });
   });
 });

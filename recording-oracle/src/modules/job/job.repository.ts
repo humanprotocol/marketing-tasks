@@ -24,7 +24,7 @@ export class JobRepository extends BaseRepository<JobEntity> {
     });
   }
 
-  findReadyToFinalize(now: Date): Promise<JobEntity[]> {
+  findAfterSubmissionDeadline(now: Date): Promise<JobEntity[]> {
     return this.find({
       where: {
         endDate: LessThanOrEqual(now),

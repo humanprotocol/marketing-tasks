@@ -3,10 +3,10 @@ import { JobModule } from '../job/job.module';
 import { SubmissionService } from './submission.service';
 import { StorageModule } from '../storage/storage.module';
 import { SubmissionRepository } from './submission.repository';
-import { GrokModule } from '../grok/grok.module';
+import { ValidationModule } from '../validation/validation.module';
 
 @Module({
-  imports: [JobModule, StorageModule, GrokModule],
+  imports: [JobModule, StorageModule, ValidationModule],
   providers: [SubmissionService, SubmissionRepository],
   exports: [SubmissionService],
 })

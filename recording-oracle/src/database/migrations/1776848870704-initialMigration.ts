@@ -80,7 +80,7 @@ export class InitialMigration1776848870704 implements MigrationInterface {
         `);
     await queryRunner.query(`
             CREATE TYPE "hmt"."cron_jobs_cron_job_type_enum" AS ENUM(
-                'process-ended-jobs',
+                'process-jobs-after-submission-deadline',
                 'process-pending-outgoing-webhooks'
             )
         `);

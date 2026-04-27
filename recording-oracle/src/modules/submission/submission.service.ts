@@ -11,13 +11,13 @@ import {
 import { ValidationError } from '../../common/errors';
 import {
   IExchangeSolution,
-  IGrokValidationResult,
   IManifest,
+  IPostValidationResult,
   IRecordingResult,
 } from '../../common/interfaces/job';
-import { GrokService } from '../../modules/grok/grok.service';
 import { JobService } from '../../modules/job/job.service';
 import { StorageService } from '../../modules/storage/storage.service';
+import { ValidationService } from '../validation/validation.service';
 import {
   SolutionEventData,
   SubmissionEventData,
@@ -37,7 +37,7 @@ export class SubmissionService {
     private readonly storageService: StorageService,
     private readonly submissionRepository: SubmissionRepository,
     private readonly jobService: JobService,
-    private readonly grokService: GrokService,
+    private readonly validationService: ValidationService,
   ) {}
 
   async createSubmission(webhook: WebhookDto): Promise<string> {
@@ -93,7 +93,7 @@ export class SubmissionService {
     try {
       let finalResult: IRecordingResult;
 
-      const validation = await this.grokService.validatePost(
+      const validation = await this.validationService.validatePost(
         submission.postUrl,
         manifest,
       );
@@ -194,7 +194,7 @@ export class SubmissionService {
   }
 
   private getRejectionReason(
-    validation: IGrokValidationResult,
+    validation: IPostValidationResult,
     manifest: IManifest,
   ): SubmissionRejectionReason | null {
     for (const rule of SUBMISSION_VALIDATION_RULES) {

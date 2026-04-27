@@ -1,4 +1,9 @@
-import { IManifest } from '../../common/interfaces/job';
+import {
+  IManifest,
+  IPostValidationResult,
+} from '../../../common/interfaces/job';
+
+import { GrokResponsesApiResponse } from './grok.interface';
 
 export const GROK_VALIDATION_SYSTEM_PROMPT =
   'Validate X posts using only public observable evidence. Be conservative and concise.';
@@ -48,6 +53,39 @@ export const GROK_VALIDATION_RESPONSE_SCHEMA = {
     },
   },
 } as const;
+
+export function extractResponsesText(payload: GrokResponsesApiResponse): string {
+  const message = payload.output?.find((item) => item.type === 'message');
+  const text = message?.content?.find((item) => item.type === 'output_text');
+
+  return text?.text ?? '';
+}
+
+export function normalizeValidationResult(
+  validation: IPostValidationResult,
+  manifest: IManifest,
+): IPostValidationResult {
+  const requirements = manifest.requirements;
+
+  return {
+    ...validation,
+    hasRequiredHashtags:
+      !requirements.required_hashtags?.length || validation.hasRequiredHashtags,
+    hasRequiredKeywords:
+      !requirements.required_keywords?.length || validation.hasRequiredKeywords,
+    hasRequiredLink: !requirements.required_link || validation.hasRequiredLink,
+    meetsMinLength: !requirements.min_length || validation.meetsMinLength,
+    hasRequiredMedia:
+      !requirements.requires_media || validation.hasRequiredMedia,
+    meetsMinFollowers:
+      !requirements.min_followers || validation.meetsMinFollowers,
+    meetsMinAccountAgeDays:
+      !requirements.min_account_age_days || validation.meetsMinAccountAgeDays,
+    meetsMinLiveDurationHours:
+      !requirements.min_live_duration_hours ||
+      validation.meetsMinLiveDurationHours,
+  };
+}
 
 export function buildGrokValidationPrompt(
   postUrl: string,

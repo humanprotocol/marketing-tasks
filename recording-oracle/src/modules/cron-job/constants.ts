@@ -1,4 +1,4 @@
 export enum CronJobType {
-  ProcessEndedJobs = 'process-ended-jobs',
+  ProcessJobsAfterSubmissionDeadline = 'process-jobs-after-submission-deadline',
   ProcessPendingOutgoingWebhooks = 'process-pending-outgoing-webhooks',
 }

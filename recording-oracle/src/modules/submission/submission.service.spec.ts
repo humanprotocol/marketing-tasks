@@ -1,10 +1,10 @@
 import { Test } from '@nestjs/testing';
 
-import { GrokService } from '../../modules/grok/grok.service';
 import { SubmissionService } from './submission.service';
 import { StorageService } from '../../modules/storage/storage.service';
 import { JobService } from '../../modules/job/job.service';
 import { SubmissionRepository } from './submission.repository';
+import { ValidationService } from '../validation/validation.service';
 
 describe('SubmissionService', () => {
   let submissionService: SubmissionService;
@@ -29,11 +29,11 @@ describe('SubmissionService', () => {
           provide: JobService,
           useValue: {
             createJob: jest.fn(),
-            finalizeJobResults: jest.fn(),
+            storeResultsForReputationOracle: jest.fn(),
           },
         },
         {
-          provide: GrokService,
+          provide: ValidationService,
           useValue: {
             validatePost: jest.fn(),
           },
