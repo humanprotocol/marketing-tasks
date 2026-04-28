@@ -51,7 +51,7 @@ export class CronJobService {
     return Boolean(cronJob && !cronJob.completedAt);
   }
 
-  @Cron('*/2 * * * *')
+  @Cron('*/5 * * * *')
   async processJobsAfterSubmissionDeadline(): Promise<void> {
     if (
       await this.isCronJobRunning(
@@ -114,7 +114,7 @@ export class CronJobService {
     await this.completeCronJob(cronJob);
   }
 
-  @Cron('*/2 * * * *')
+  @Cron('*/5 * * * *')
   async processPendingOutgoingWebhooks(): Promise<void> {
     if (
       await this.isCronJobRunning(CronJobType.ProcessPendingOutgoingWebhooks)
