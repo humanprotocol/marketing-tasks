@@ -5,6 +5,7 @@
   "description": "Social Media Promotion Exchange Oracle",
   "author": "Human Protocol",
   "license": "MIT",
+  "packageManager": "yarn@4.10.3",
   "scripts": {
     "clean": "rm -rf dist",
     "build": "nest build",
