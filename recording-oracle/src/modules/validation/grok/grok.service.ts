@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
 import { GrokConfigService } from '../../../common/config/grok-config.service';
-import { ErrorJob } from '../../../common/constants/errors';
 import { ServerError } from '../../../common/errors';
 import {
   IManifest,
@@ -26,9 +25,6 @@ export class GrokService implements ValidationService {
     manifest: IManifest,
   ): Promise<IPostValidationResult | null> {
     const apiKey = this.grokConfigService.apiKey;
-    if (!apiKey) {
-      throw new ServerError(ErrorJob.MissingGrokCredentials);
-    }
 
     const response = await fetch(
       `${this.grokConfigService.baseUrl}/responses`,

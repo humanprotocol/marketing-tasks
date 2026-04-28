@@ -7,11 +7,32 @@ export const envValidator = Joi.object({
   FE_URL: Joi.string(),
   MAX_RETRY_COUNT: Joi.number(),
   // Database
-  POSTGRES_HOST: Joi.string(),
-  POSTGRES_USER: Joi.string(),
-  POSTGRES_PASSWORD: Joi.string(),
-  POSTGRES_DATABASE: Joi.string(),
-  POSTGRES_PORT: Joi.string(),
+  POSTGRES_URL: Joi.string().optional(),
+  POSTGRES_HOST: Joi.when('POSTGRES_URL', {
+    is: Joi.exist(),
+    then: Joi.string().optional(),
+    otherwise: Joi.string().required(),
+  }),
+  POSTGRES_USER: Joi.when('POSTGRES_URL', {
+    is: Joi.exist(),
+    then: Joi.string().optional(),
+    otherwise: Joi.string().required(),
+  }),
+  POSTGRES_PASSWORD: Joi.when('POSTGRES_URL', {
+    is: Joi.exist(),
+    then: Joi.string().optional(),
+    otherwise: Joi.string().required(),
+  }),
+  POSTGRES_DATABASE: Joi.when('POSTGRES_URL', {
+    is: Joi.exist(),
+    then: Joi.string().optional(),
+    otherwise: Joi.string().required(),
+  }),
+  POSTGRES_PORT: Joi.when('POSTGRES_URL', {
+    is: Joi.exist(),
+    then: Joi.string().optional(),
+    otherwise: Joi.string().required(),
+  }),
   POSTGRES_SSL: Joi.string(),
   POSTGRES_LOGGING: Joi.string(),
   // Web3
@@ -19,19 +40,27 @@ export const envValidator = Joi.object({
   WEB3_PRIVATE_KEY: Joi.string().required(),
   RPC_URL_POLYGON: Joi.string(),
   RPC_URL_BSC: Joi.string(),
-  RPC_URL_POLYGON_AMOY: Joi.string(),
+  RPC_URL_POLYGON_AMOY: Joi.string().required(),
   RPC_URL_SEPOLIA: Joi.string(),
   RPC_URL_BSC_TESTNET: Joi.string(),
   RPC_URL_LOCALHOST: Joi.string(),
   // S3
-  S3_ENDPOINT: Joi.string(),
-  S3_PORT: Joi.string(),
+  S3_ENDPOINT: Joi.string().required(),
+  S3_PORT: Joi.string().required(),
   S3_ACCESS_KEY: Joi.string().required(),
   S3_SECRET_KEY: Joi.string().required(),
-  S3_BUCKET: Joi.string(),
-  S3_USE_SSL: Joi.string(),
+  S3_BUCKET: Joi.string().required(),
+  S3_USE_SSL: Joi.string().required(),
   // PGP
-  PGP_ENCRYPT: Joi.boolean(),
-  PGP_PRIVATE_KEY: Joi.string().optional(),
-  PGP_PASSPHRASE: Joi.string().optional(),
+  PGP_ENCRYPT: Joi.boolean().required(),
+  PGP_PRIVATE_KEY: Joi.when('PGP_ENCRYPT', {
+    is: true,
+    then: Joi.string().required(),
+    otherwise: Joi.string().optional(),
+  }),
+  PGP_PASSPHRASE: Joi.when('PGP_ENCRYPT', {
+    is: true,
+    then: Joi.string().required(),
+    otherwise: Joi.string().optional(),
+  }),
 });
