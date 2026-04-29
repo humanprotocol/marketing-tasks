@@ -24,7 +24,7 @@ export class ServerConfigService {
   get socialMediaValidationMaxRetries(): number {
     return +this.configService.get<number>(
       'SOCIAL_MEDIA_VALIDATION_MAX_RETRIES',
-      96,
+      5,
     );
   }
 }
