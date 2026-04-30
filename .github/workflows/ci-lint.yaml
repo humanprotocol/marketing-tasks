@@ -1,0 +1,38 @@
+name: Lint check
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - recording-oracle
+          - exchange-oracle/server
+          - exchange-oracle/client
+    steps:
+      - uses: actions/checkout@v6
+      - name: Enable corepack
+        run: corepack enable
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+          cache-dependency-path: '**/yarn.lock'
+      - name: Install dependencies
+        working-directory: ${{ matrix.project }}
+        run: yarn install --immutable
+      - name: Run lint
+        working-directory: ${{ matrix.project }}
+        run: yarn lint

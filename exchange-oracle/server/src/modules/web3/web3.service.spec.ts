@@ -65,18 +65,16 @@ describe('Web3Service', () => {
     });
 
     it('should reflect network config changes', () => {
-      jest
-        .spyOn(networkConfigService, 'networks', 'get')
-        .mockReturnValue([
-          {
-            chainId: ChainId.POLYGON,
-            rpcUrl: 'http://polygon-rpc.url',
-          },
-          {
-            chainId: ChainId.BSC_MAINNET,
-            rpcUrl: 'http://bsc-rpc.url',
-          },
-        ]);
+      jest.spyOn(networkConfigService, 'networks', 'get').mockReturnValue([
+        {
+          chainId: ChainId.POLYGON,
+          rpcUrl: 'http://polygon-rpc.url',
+        },
+        {
+          chainId: ChainId.BSC_MAINNET,
+          rpcUrl: 'http://bsc-rpc.url',
+        },
+      ]);
 
       const validChainIds = web3Service.getValidChains();
       expect(validChainIds).toEqual([ChainId.POLYGON, ChainId.BSC_MAINNET]);

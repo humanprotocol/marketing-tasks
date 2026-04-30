@@ -1,21 +1,8 @@
 {
   "name": "marketing-tasks",
   "private": true,
-  "description": "Marketing Tasks Monorepo",
+  "description": "Marketing Tasks",
   "repository": "https://github.com/humanprotocol/marketing-tasks",
   "author": "Human Protocol",
-  "license": "MIT",
-  "workspaces": [
-    "recording-oracle",
-    "exchange-oracle/server",
-    "exchange-oracle/client"
-  ],
-  "packageManager": "yarn@4.10.3",
-  "scripts": {
-    "create:marketing-job": "node ./scripts/create-marketing-job.js"
-  },
-  "devDependencies": {
-    "husky": "^9.1.7",
-    "lint-staged": "^16.1.0"
-  }
+  "license": "MIT"
 }

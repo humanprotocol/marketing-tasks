@@ -241,10 +241,7 @@ export class JobService {
       const formattedError = formatAxiosError(error as any);
       const userMessage =
         (error as any).responseMessage ?? ErrorWebhook.SubmissionForwardFailed;
-      throw new ServerError(
-        userMessage,
-        formattedError.stack,
-      );
+      throw new ServerError(userMessage, formattedError.stack);
     }
 
     assignment.status = AssignmentStatus.VALIDATION;

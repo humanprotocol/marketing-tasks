@@ -464,8 +464,11 @@ describe('JobService', () => {
       jest
         .spyOn(assignmentRepository, 'findOneById')
         .mockResolvedValue(assignment as AssignmentEntity);
-      const downstreamError: any = new Error('Request failed with status code 400');
-      downstreamError.responseMessage = 'Manifest does not contain the required data';
+      const downstreamError: any = new Error(
+        'Request failed with status code 400',
+      );
+      downstreamError.responseMessage =
+        'Manifest does not contain the required data';
       jest
         .spyOn(webhookService, 'sendWebhook')
         .mockRejectedValue(downstreamError);

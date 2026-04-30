@@ -54,7 +54,9 @@ export const GROK_VALIDATION_RESPONSE_SCHEMA = {
   },
 } as const;
 
-export function extractResponsesText(payload: GrokResponsesApiResponse): string {
+export function extractResponsesText(
+  payload: GrokResponsesApiResponse,
+): string {
   const message = payload.output?.find((item) => item.type === 'message');
   const text = message?.content?.find((item) => item.type === 'output_text');
 
