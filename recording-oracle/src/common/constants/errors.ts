@@ -6,12 +6,8 @@ export enum ErrorJob {
   InvalidStatus = 'Escrow is not in the Pending status',
   InvalidManifest = 'Manifest does not contain the required data',
   InvalidJobType = 'Manifest contains an invalid job type',
-  NotFoundIntermediateResultsUrl = 'Error while getting intermediate results url from escrow contract',
   SolutionAlreadyExists = 'Solution already exists',
-  AllSolutionsHaveAlreadyBeenSent = 'All solutions have already been sent',
-  ManifestNotFound = 'Manifest not found',
   InvalidPostUrl = 'Post URL must be a valid x.com status URL',
-  MissingGrokCredentials = 'Missing Grok credentials',
 }
 
 /**
@@ -63,12 +59,4 @@ export enum ErrorStorage {
   MissingPublicKey = 'Missing public key',
   EncryptionError = 'Encryption error',
   FileNotUploaded = 'File not uploaded',
-}
-
-/**
- * Represents error messages related to bucket.
- */
-export enum ErrorBucket {
-  NotPublic = 'Bucket is not public',
-  UnableSaveFile = 'Unable to save file',
 }

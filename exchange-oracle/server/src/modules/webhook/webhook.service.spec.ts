@@ -193,7 +193,7 @@ describe('WebhookService', () => {
           ChainId.LOCALHOST,
           EventType.ESCROW_CREATED,
         ),
-      ).rejects.toThrow('Invalid outgoing event type');
+      ).rejects.toThrow(ErrorWebhook.InvalidOutgoingEventType);
     });
 
     it('should throw NotFoundError if operator is not found', async () => {
@@ -209,7 +209,7 @@ describe('WebhookService', () => {
           ChainId.LOCALHOST,
           EventType.ESCROW_FAILED,
         ),
-      ).rejects.toThrow(new NotFoundError('Oracle not found'));
+      ).rejects.toThrow(new NotFoundError(ErrorWebhook.OracleNotFound));
     });
 
     it('should throw NotFoundError if webhook url is not found', async () => {
@@ -227,7 +227,9 @@ describe('WebhookService', () => {
           ChainId.LOCALHOST,
           EventType.ESCROW_FAILED,
         ),
-      ).rejects.toThrow(new NotFoundError('Oracle webhook URL not found'));
+      ).rejects.toThrow(
+        new NotFoundError(ErrorWebhook.OracleWebhookUrlNotFound),
+      );
     });
   });
 });

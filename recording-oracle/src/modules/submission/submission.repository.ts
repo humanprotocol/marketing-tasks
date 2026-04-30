@@ -13,15 +13,25 @@ export class SubmissionRepository extends BaseRepository<SubmissionEntity> {
     super(SubmissionEntity, dataSource);
   }
 
-  findOneForSubmission(
+  findOneByJobIdAndWorkerAddress(
     jobId: number,
     workerAddress: string,
-    postUrl: string,
   ): Promise<SubmissionEntity | null> {
     return this.findOne({
       where: {
         jobId,
         workerAddress,
+      },
+    });
+  }
+
+  findOneByJobIdAndPostUrl(
+    jobId: number,
+    postUrl: string,
+  ): Promise<SubmissionEntity | null> {
+    return this.findOne({
+      where: {
+        jobId,
         postUrl,
       },
     });

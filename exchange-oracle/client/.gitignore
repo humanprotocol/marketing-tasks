@@ -2,3 +2,5 @@ dist
 .env
 .env.local
 .env.*.local
+.yarn/install-state.gz
+node_modules/.yarn-state.yml
