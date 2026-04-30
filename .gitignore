@@ -12,6 +12,9 @@ node_modules
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+.yarn/install-state.gz
+**/.yarn/install-state.gz
+**/node_modules/.yarn-state.yml
 
 # Ignore developer-only local files
 .local
