@@ -81,14 +81,14 @@ export class WebhookService {
           await escrowClient.getRecordingOracleAddress(escrowAddress);
         break;
       default:
-        throw new ValidationError('Invalid outgoing event type');
+        throw new ValidationError(ErrorWebhook.InvalidOutgoingEventType);
     }
     const oracle = await OperatorUtils.getOperator(chainId, oracleAddress);
     if (!oracle) {
-      throw new NotFoundError('Oracle not found');
+      throw new NotFoundError(ErrorWebhook.OracleNotFound);
     }
     if (!oracle.webhookUrl) {
-      throw new NotFoundError('Oracle webhook URL not found');
+      throw new NotFoundError(ErrorWebhook.OracleWebhookUrlNotFound);
     }
 
     return oracle.webhookUrl;

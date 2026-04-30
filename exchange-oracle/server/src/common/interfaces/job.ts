@@ -1,9 +1,3 @@
-export interface ISolution {
-  workerAddress: string;
-  postUrl: string;
-  error?: boolean;
-}
-
 export type AbuseProbability = 'low' | 'medium' | 'high';
 
 export interface ManifestCampaign {

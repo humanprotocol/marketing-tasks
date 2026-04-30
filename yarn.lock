@@ -4580,7 +4580,6 @@ __metadata:
     jest: "npm:^29.7.0"
     joi: "npm:^17.13.3"
     jsonwebtoken: "npm:^9.0.2"
-    minio: "npm:8.0.6"
     passport: "npm:^0.7.0"
     passport-jwt: "npm:^4.0.1"
     pg: "npm:8.13.1"

@@ -35,17 +35,6 @@ export interface IManifest {
   qualifications?: string[];
 }
 
-export interface IExchangeSolution {
-  workerAddress: string;
-  postUrl: string;
-  error?: boolean | string;
-}
-
-export interface IExchangeSolutionsFile {
-  exchangeAddress: string;
-  solutions: IExchangeSolution[];
-}
-
 export interface IRecordingResult {
   workerAddress: string;
   postUrl: string;

@@ -10,16 +10,13 @@ import {
 } from '../../common/enums/submission';
 import { ValidationError } from '../../common/errors';
 import {
-  IExchangeSolution,
   IManifest,
   IPostValidationResult,
   IRecordingResult,
 } from '../../common/interfaces/job';
 import { JobService } from '../../modules/job/job.service';
-import { StorageService } from '../../modules/storage/storage.service';
 import { ValidationService } from '../validation/validation.service';
 import {
-  SolutionEventData,
   SubmissionEventData,
   WebhookDto,
 } from '../../modules/webhook/webhook.dto';
@@ -34,7 +31,6 @@ import { SubmissionRepository } from './submission.repository';
 @Injectable()
 export class SubmissionService {
   constructor(
-    private readonly storageService: StorageService,
     private readonly submissionRepository: SubmissionRepository,
     private readonly jobService: JobService,
     private readonly validationService: ValidationService,
@@ -45,8 +41,6 @@ export class SubmissionService {
       webhook.chainId,
       webhook.escrowAddress,
     );
-    const solutionsUrl = (webhook.eventData as SolutionEventData | undefined)
-      ?.solutionsUrl;
     const submissionEventData = webhook.eventData as
       | SubmissionEventData
       | undefined;
@@ -58,29 +52,6 @@ export class SubmissionService {
         submissionEventData.postUrl,
       );
       return 'Submission received.';
-    }
-
-    if (solutionsUrl) {
-      const payload = await this.storageService.download(solutionsUrl);
-      const exchangeSolutions = Array.isArray(payload?.solutions)
-        ? (payload.solutions as IExchangeSolution[])
-        : Array.isArray(payload)
-          ? (payload as IExchangeSolution[])
-          : [];
-
-      for (const solution of exchangeSolutions) {
-        if (solution.error) {
-          continue;
-        }
-
-        await this.saveSubmission(
-          job.id,
-          solution.workerAddress,
-          solution.postUrl,
-        );
-      }
-
-      return 'Submissions received.';
     }
 
     throw new ValidationError(ErrorSubmission.MissingSubmissionData);
@@ -150,14 +121,23 @@ export class SubmissionService {
   ): Promise<void> {
     const normalizedPostUrl = this.validatePostUrl(postUrl);
     const existingSubmission =
-      await this.submissionRepository.findOneForSubmission(
+      await this.submissionRepository.findOneByJobIdAndWorkerAddress(
         jobId,
         workerAddress,
-        normalizedPostUrl,
       );
 
     if (existingSubmission) {
       throw new ValidationError(ErrorJob.SolutionAlreadyExists);
+    }
+
+    const existingPostSubmission =
+      await this.submissionRepository.findOneByJobIdAndPostUrl(
+        jobId,
+        normalizedPostUrl,
+      );
+
+    if (existingPostSubmission) {
+      throw new ValidationError(SubmissionRejectionReason.DuplicateSubmission);
     }
 
     const submission = new SubmissionEntity();

@@ -6,7 +6,6 @@ export enum JobStatus {
 
 export enum JobSortField {
   CHAIN_ID = 'chain_id',
-  JOB_TYPE = 'job_type',
   REWARD_AMOUNT = 'reward_amount',
   CREATED_AT = 'created_at',
   UPDATED_AT = 'updated_at',
@@ -32,7 +31,6 @@ export enum AssignmentStatus {
 
 export enum AssignmentSortField {
   CHAIN_ID = 'chain_id',
-  JOB_TYPE = 'job_type',
   STATUS = 'status',
   REWARD_AMOUNT = 'reward_amount',
   CREATED_AT = 'created_at',
