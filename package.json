@@ -7,7 +7,8 @@
   "license": "MIT",
   "workspaces": [
     "recording-oracle",
-    "exchange-oracle/server"
+    "exchange-oracle/server",
+    "exchange-oracle/client"
   ],
   "packageManager": "yarn@4.10.3",
   "scripts": {
