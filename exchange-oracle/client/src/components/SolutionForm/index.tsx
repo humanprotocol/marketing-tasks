@@ -40,7 +40,7 @@ const SolutionForm: React.FC = () => {
       return;
     }
     const message = {
-      solution: post,
+      post_url: post,
       assignment_id: assignmentId,
     };
 
