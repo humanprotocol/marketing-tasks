@@ -10,7 +10,7 @@ export const envValidator = Joi.object({
   SDK_TX_TIMEOUT_MS: Joi.number(),
   RPC_URL_POLYGON: Joi.string(),
   RPC_URL_BSC: Joi.string(),
-  RPC_URL_POLYGON_AMOY: Joi.string().required(),
+  RPC_URL_POLYGON_AMOY: Joi.string(),
   RPC_URL_SEPOLIA: Joi.string(),
   RPC_URL_MOONBEAM: Joi.string(),
   RPC_URL_BSC_TESTNET: Joi.string(),
