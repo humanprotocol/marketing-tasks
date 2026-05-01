@@ -44,13 +44,6 @@ export const envValidator = Joi.object({
   RPC_URL_SEPOLIA: Joi.string(),
   RPC_URL_BSC_TESTNET: Joi.string(),
   RPC_URL_LOCALHOST: Joi.string(),
-  // S3
-  S3_ENDPOINT: Joi.string().required(),
-  S3_PORT: Joi.string().required(),
-  S3_ACCESS_KEY: Joi.string().required(),
-  S3_SECRET_KEY: Joi.string().required(),
-  S3_BUCKET: Joi.string().required(),
-  S3_USE_SSL: Joi.string().required(),
   // PGP
   PGP_ENCRYPT: Joi.boolean().required(),
   PGP_PRIVATE_KEY: Joi.when('PGP_ENCRYPT', {

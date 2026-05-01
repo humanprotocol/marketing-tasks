@@ -79,6 +79,9 @@ export class InitialMigration1776848870704 implements MigrationInterface {
             CREATE UNIQUE INDEX "IDX_b1667bc245dc698144e09383af" ON "hmt"."submissions" ("job_id", "worker_address")
         `);
     await queryRunner.query(`
+            CREATE UNIQUE INDEX "IDX_5e2bf3a0b98f75d6f3f3f7e5f4" ON "hmt"."submissions" ("job_id", "post_url")
+        `);
+    await queryRunner.query(`
             CREATE TYPE "hmt"."cron_jobs_cron_job_type_enum" AS ENUM(
                 'process-jobs-after-submission-deadline',
                 'process-pending-outgoing-webhooks'
@@ -111,6 +114,9 @@ export class InitialMigration1776848870704 implements MigrationInterface {
         `);
     await queryRunner.query(`
             DROP TYPE "hmt"."cron_jobs_cron_job_type_enum"
+        `);
+    await queryRunner.query(`
+            DROP INDEX "hmt"."IDX_5e2bf3a0b98f75d6f3f3f7e5f4"
         `);
     await queryRunner.query(`
             DROP INDEX "hmt"."IDX_b1667bc245dc698144e09383af"

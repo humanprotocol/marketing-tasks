@@ -1,0 +1,111 @@
+name: Service Tests
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  changes:
+    name: Detect affected services
+    runs-on: ubuntu-latest
+    outputs:
+      common: ${{ steps.filter.outputs.common }}
+      recording_oracle: ${{ steps.filter.outputs.recording_oracle }}
+      exchange_oracle_server: ${{ steps.filter.outputs.exchange_oracle_server }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - id: filter
+        name: Evaluate path filters
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            common:
+              - .nvmrc
+              - .github/workflows/ci-test.yaml
+            recording_oracle:
+              - recording-oracle/**
+            exchange_oracle_server:
+              - exchange-oracle/server/**
+
+  recording-oracle-test:
+    name: Recording Oracle Tests
+    needs: changes
+    if: needs.changes.outputs.recording_oracle == 'true' || needs.changes.outputs.common == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+          cache-dependency-path: recording-oracle/yarn.lock
+
+      - name: Install dependencies
+        working-directory: recording-oracle
+        run: yarn install --immutable
+
+      - name: Run tests
+        working-directory: recording-oracle
+        run: yarn test
+
+  exchange-oracle-server-test:
+    name: Exchange Oracle Server Tests
+    needs: changes
+    if: needs.changes.outputs.exchange_oracle_server == 'true' || needs.changes.outputs.common == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+          cache-dependency-path: exchange-oracle/server/yarn.lock
+
+      - name: Install dependencies
+        working-directory: exchange-oracle/server
+        run: yarn install --immutable
+
+      - name: Run tests
+        working-directory: exchange-oracle/server
+        run: yarn test
+
+  checks-summary:
+    name: Checks summary
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - changes
+      - recording-oracle-test
+      - exchange-oracle-server-test
+    steps:
+      - name: Evaluate job results
+        run: |
+          set -euo pipefail
+
+          for result in \
+            "${{ needs.recording-oracle-test.result }}" \
+            "${{ needs.exchange-oracle-server-test.result }}"; do
+            [[ "$result" == "success" || "$result" == "skipped" ]] || exit 1
+          done

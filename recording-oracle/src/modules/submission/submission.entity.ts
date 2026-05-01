@@ -8,6 +8,7 @@ import { JobEntity } from '../../modules/job/job.entity';
 
 @Entity({ schema: NS, name: 'submissions' })
 @Index(['jobId', 'workerAddress'], { unique: true })
+@Index(['jobId', 'postUrl'], { unique: true })
 export class SubmissionEntity extends BaseEntity {
   @Column({ type: 'int' })
   jobId: number;

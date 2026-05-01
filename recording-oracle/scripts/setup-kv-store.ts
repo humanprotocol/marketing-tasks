@@ -112,9 +112,7 @@ async function setup(): Promise<void> {
   }
 
   if (
-    [S3_ENDPOINT, S3_PORT, S3_ACCESS_KEY, S3_SECRET_KEY].some(
-      (value) => !value,
-    )
+    [S3_ENDPOINT, S3_PORT, S3_ACCESS_KEY, S3_SECRET_KEY].some((value) => !value)
   ) {
     throw new Error('Missing S3 config value');
   }

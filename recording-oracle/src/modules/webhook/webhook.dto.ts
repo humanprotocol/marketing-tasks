@@ -28,12 +28,6 @@ export class RejectionEventData {
   public assignments: AssignmentRejection[];
 }
 
-export class SolutionEventData {
-  @ApiProperty({ name: 'solutions_url' })
-  @IsString()
-  solutionsUrl: string;
-}
-
 export class SubmissionEventData {
   @ApiProperty({ name: 'assignee_id' })
   @IsString()
@@ -44,10 +38,7 @@ export class SubmissionEventData {
   postUrl: string;
 }
 
-export type EventData =
-  | RejectionEventData
-  | SolutionEventData
-  | SubmissionEventData;
+export type EventData = RejectionEventData | SubmissionEventData;
 
 export class WebhookDto {
   @ApiProperty({
