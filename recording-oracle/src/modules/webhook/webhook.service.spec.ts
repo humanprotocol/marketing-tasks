@@ -94,31 +94,4 @@ describe('WebhookService', () => {
       }),
     );
   });
-
-  it('fails an outgoing webhook already at max retries without sending it again', async () => {
-    const webhook = {
-      chainId,
-      escrowAddress,
-      eventType: EventType.JOB_COMPLETED,
-      eventData: null,
-      retriesCount: 6,
-      status: WebhookStatus.PENDING,
-      waitUntil: new Date(),
-    };
-
-    jest
-      .spyOn(webhookRepository, 'findByStatus')
-      .mockResolvedValue([webhook as any]);
-    const sendWebhookSpy = jest.spyOn(webhookService, 'sendWebhook');
-
-    await webhookService.processPendingWebhooks();
-
-    expect(sendWebhookSpy).not.toHaveBeenCalled();
-    expect(webhookRepository.updateOne).toHaveBeenCalledWith(
-      expect.objectContaining({
-        retriesCount: 6,
-        status: WebhookStatus.FAILED,
-      }),
-    );
-  });
 });

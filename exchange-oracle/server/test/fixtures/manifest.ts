@@ -9,7 +9,9 @@ export function createManifest(
   return {
     job_type: JobType.SOCIAL_MEDIA_PROMOTION,
     submissions_required: faker.number.int({ min: 1, max: 10 }),
-    end_date: faker.date.soon({ days: 14 }).getTime(),
+    end_date: faker.date
+      .soon({ days: 30, refDate: Date.now() + 14 * 24 * 60 * 60 * 1000 })
+      .getTime(),
     platforms: ['x'],
     campaign: {
       name: faker.company.catchPhrase(),
@@ -22,7 +24,7 @@ export function createManifest(
       min_length: faker.number.int({ min: 20, max: 280 }),
       requires_media: faker.datatype.boolean(),
       must_be_public: true,
-      min_live_duration_hours: faker.number.int({ min: 1, max: 168 }),
+      min_live_duration_hours: faker.number.int({ min: 1, max: 24 }),
       min_followers: faker.number.int({ min: 0, max: 10000 }),
       min_account_age_days: faker.number.int({ min: 0, max: 3650 }),
     },
