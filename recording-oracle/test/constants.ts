@@ -52,6 +52,8 @@ export const MOCK_MANIFEST: IManifest = {
     min_live_duration_hours: 72,
     min_followers: 1000,
     min_account_age_days: 365,
+    min_likes: 100,
+    min_reposts: 25,
   },
   ai_validation: {
     allowed_abuse_probability: 'medium',

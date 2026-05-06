@@ -27,6 +27,8 @@ export const GROK_VALIDATION_RESPONSE_SCHEMA = {
         meetsMinFollowers: { type: 'boolean' },
         meetsMinAccountAgeDays: { type: 'boolean' },
         meetsMinLiveDurationHours: { type: 'boolean' },
+        meetsMinLikes: { type: 'boolean' },
+        meetsMinReposts: { type: 'boolean' },
         followerAuthenticity: {
           type: 'string',
           enum: ['low', 'medium', 'high'],
@@ -47,6 +49,8 @@ export const GROK_VALIDATION_RESPONSE_SCHEMA = {
         'meetsMinFollowers',
         'meetsMinAccountAgeDays',
         'meetsMinLiveDurationHours',
+        'meetsMinLikes',
+        'meetsMinReposts',
         'followerAuthenticity',
         'overallBotProbability',
       ],
@@ -86,6 +90,8 @@ export function normalizeValidationResult(
     meetsMinLiveDurationHours:
       !requirements.min_live_duration_hours ||
       validation.meetsMinLiveDurationHours,
+    meetsMinLikes: !requirements.min_likes || validation.meetsMinLikes,
+    meetsMinReposts: !requirements.min_reposts || validation.meetsMinReposts,
   };
 }
 
@@ -142,6 +148,14 @@ export function buildGrokValidationPrompt(
     rules.push(
       `- post live duration in hours >= ${requirements.min_live_duration_hours}`,
     );
+  }
+
+  if (requirements.min_likes && requirements.min_likes > 0) {
+    rules.push(`- post likes >= ${requirements.min_likes}`);
+  }
+
+  if (requirements.min_reposts && requirements.min_reposts > 0) {
+    rules.push(`- post reposts >= ${requirements.min_reposts}`);
   }
 
   return `Validate this X post for campaign compliance.

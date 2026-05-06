@@ -15,6 +15,8 @@ export interface ManifestRequirements {
   min_live_duration_hours?: number;
   min_followers?: number;
   min_account_age_days?: number;
+  min_likes?: number;
+  min_reposts?: number;
 }
 
 export interface ManifestAiValidation {
