@@ -62,4 +62,14 @@ export const SUBMISSION_VALIDATION_RULES: SubmissionValidationRule[] = [
       validation.meetsMinLiveDurationHours,
     rejectionReason: SubmissionRejectionReason.MinLiveDurationNotMet,
   },
+  {
+    isValid: (validation, manifest) =>
+      !manifest.requirements.min_likes || validation.meetsMinLikes,
+    rejectionReason: SubmissionRejectionReason.MinLikesNotMet,
+  },
+  {
+    isValid: (validation, manifest) =>
+      !manifest.requirements.min_reposts || validation.meetsMinReposts,
+    rejectionReason: SubmissionRejectionReason.MinRepostsNotMet,
+  },
 ];

@@ -13,6 +13,8 @@ export interface IManifestRequirements {
   min_live_duration_hours?: number;
   min_followers?: number;
   min_account_age_days?: number;
+  min_likes?: number;
+  min_reposts?: number;
 }
 
 export interface IManifestAiValidation {
@@ -53,6 +55,8 @@ export interface IPostValidationResult {
   meetsMinFollowers: boolean;
   meetsMinAccountAgeDays: boolean;
   meetsMinLiveDurationHours: boolean;
+  meetsMinLikes: boolean;
+  meetsMinReposts: boolean;
   followerAuthenticity: AbuseProbability;
   overallBotProbability: AbuseProbability;
 }

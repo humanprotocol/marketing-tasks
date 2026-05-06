@@ -62,6 +62,16 @@ class ManifestRequirementsDto {
   @IsNumber()
   @Min(0)
   min_account_age_days?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  min_likes?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  min_reposts?: number;
 }
 
 class ManifestAiValidationDto {
