@@ -34,6 +34,8 @@ export enum SubmissionRejectionReason {
   MinFollowersNotMet = 'Minimum followers not met',
   MinAccountAgeNotMet = 'Minimum account age not met',
   MinLiveDurationNotMet = 'Minimum live duration not met',
+  MinLikesNotMet = 'Minimum likes not met',
+  MinRepostsNotMet = 'Minimum reposts not met',
   AbuseProbabilityTooHigh = 'Abuse probability too high',
 }
 

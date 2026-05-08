@@ -27,6 +27,8 @@ export function createManifest(
       min_live_duration_hours: faker.number.int({ min: 1, max: 24 }),
       min_followers: faker.number.int({ min: 0, max: 10000 }),
       min_account_age_days: faker.number.int({ min: 0, max: 3650 }),
+      min_likes: faker.number.int({ min: 0, max: 1000 }),
+      min_reposts: faker.number.int({ min: 0, max: 1000 }),
     },
     ai_validation: {
       allowed_abuse_probability: faker.helpers.arrayElement([
