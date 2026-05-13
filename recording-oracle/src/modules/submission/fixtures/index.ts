@@ -1,8 +1,6 @@
 import { faker } from '@faker-js/faker';
 
 import { SubmissionStatus } from '../../../common/enums/submission';
-import { EventType } from '../../../common/enums/webhook';
-import { WebhookDto } from '../../../modules/webhook/webhook.dto';
 import { SubmissionEntity } from '../submission.entity';
 
 export const generatePostUrl = (): string =>
