@@ -1,17 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 
+import {
+  SubmissionStatus,
+  VerificationResult,
+} from '../../common/enums/submission';
 import { EventType } from '../../common/enums/webhook';
 import { IRecordingResult } from '../../common/interfaces/job';
 import logger from '../../logger';
 import { JobService } from '../../modules/job/job.service';
 import { SubmissionService } from '../../modules/submission/submission.service';
+import { SubmissionEntity } from '../../modules/submission/submission.entity';
 import { WebhookService } from '../../modules/webhook/webhook.service';
 
 import { CronJobType } from './constants';
 import { CronJobEntity } from './cron-job.entity';
 import { CronJobRepository } from './cron-job.repository';
-import { SubmissionStatus } from '../../common/enums/submission';
 
 @Injectable()
 export class CronJobService {
@@ -71,19 +75,23 @@ export class CronJobService {
       for (const job of jobs) {
         try {
           const manifest = await this.jobService.getManifest(job.manifestUrl);
-          const existingResults: IRecordingResult[] = [];
-          const allResults = [...existingResults];
+          const allResults: IRecordingResult[] = [];
 
           for (const submission of job.submissions ?? []) {
-            if (submission.status !== SubmissionStatus.PENDING) {
+            if (submission.status === SubmissionStatus.PENDING) {
+              const result = await this.submissionService.processSubmission(
+                submission,
+                manifest,
+              );
+              allResults.push(result);
               continue;
+            } else {
+              const existingResult =
+                this.getProcessedSubmissionResult(submission);
+              if (existingResult) {
+                allResults.push(existingResult);
+              }
             }
-
-            const result = await this.submissionService.processSubmission(
-              submission,
-              manifest,
-            );
-            allResults.push(result);
           }
 
           await this.jobService.storeResults(
@@ -112,6 +120,28 @@ export class CronJobService {
     }
 
     await this.completeCronJob(cronJob);
+  }
+
+  private getProcessedSubmissionResult(
+    submission: SubmissionEntity,
+  ): IRecordingResult | null {
+    switch (submission.status) {
+      case SubmissionStatus.ACCEPTED:
+        return {
+          workerAddress: submission.workerAddress,
+          postUrl: submission.postUrl,
+          verificationResult: VerificationResult.ACCEPTED,
+        };
+      case SubmissionStatus.REJECTED:
+        return {
+          workerAddress: submission.workerAddress,
+          postUrl: submission.postUrl,
+          verificationResult: VerificationResult.REJECTED,
+          rejectionReason: submission.reason ?? undefined,
+        };
+      default:
+        return null;
+    }
   }
 
   @Cron('*/5 * * * *')
