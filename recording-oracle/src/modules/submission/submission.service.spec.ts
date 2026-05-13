@@ -1,28 +1,33 @@
+import { faker } from '@faker-js/faker';
 import { Test } from '@nestjs/testing';
 
-import { SubmissionService } from './submission.service';
 import { JobService } from '../../modules/job/job.service';
-import { SubmissionRepository } from './submission.repository';
+import { generateJob } from '../../modules/job/fixtures';
 import { ValidationService } from '../validation/validation.service';
 import {
   ErrorJob,
   SubmissionRejectionReason,
 } from '../../common/constants/errors';
+import { generatePostUrl } from './fixtures';
+import { SubmissionRepository } from './submission.repository';
+import { SubmissionService } from './submission.service';
 import { EventType } from '../../common/enums/webhook';
-import { WebhookDto } from '../webhook/webhook.dto';
 
 describe('SubmissionService', () => {
   let submissionService: SubmissionService;
   let submissionRepository: jest.Mocked<SubmissionRepository>;
   let jobService: jest.Mocked<JobService>;
 
-  const webhook: WebhookDto = {
-    chainId: 80002,
-    escrowAddress: '0x1234567890123456789012345678901234567890',
+  const job = generateJob({ id: 1 });
+  const workerAddress = faker.finance.ethereumAddress();
+  const normalizedPostUrl = generatePostUrl();
+  const webhook = {
+    chainId: job.chainId,
     eventType: EventType.SUBMISSION_IN_REVIEW,
+    escrowAddress: job.escrowAddress,
     eventData: {
-      assigneeId: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-      postUrl: 'https://x.com/example/status/12345?utm_source=test#ignored',
+      assigneeId: workerAddress,
+      postUrl: `${normalizedPostUrl}?utm_source=test#ignored`,
     },
   };
 
@@ -59,7 +64,7 @@ describe('SubmissionService', () => {
     submissionRepository = moduleRef.get(SubmissionRepository);
     jobService = moduleRef.get(JobService);
 
-    jobService.createJob.mockResolvedValue({ id: 1 } as any);
+    jobService.createJob.mockResolvedValue(job);
     submissionRepository.findOneByJobIdAndWorkerAddress.mockResolvedValue(null);
     submissionRepository.findOneByJobIdAndPostUrl.mockResolvedValue(null);
   });
@@ -75,16 +80,16 @@ describe('SubmissionService', () => {
 
     expect(
       submissionRepository.findOneByJobIdAndWorkerAddress,
-    ).toHaveBeenCalledWith(1, '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+    ).toHaveBeenCalledWith(1, workerAddress);
     expect(submissionRepository.findOneByJobIdAndPostUrl).toHaveBeenCalledWith(
       1,
-      'https://x.com/example/status/12345',
+      normalizedPostUrl,
     );
     expect(submissionRepository.createUnique).toHaveBeenCalledWith(
       expect.objectContaining({
         jobId: 1,
-        workerAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-        postUrl: 'https://x.com/example/status/12345',
+        workerAddress,
+        postUrl: normalizedPostUrl,
       }),
     );
   });

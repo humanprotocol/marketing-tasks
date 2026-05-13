@@ -5,6 +5,7 @@ import {
   EscrowClient,
   KVStoreUtils,
 } from '@human-protocol/sdk';
+import { faker } from '@faker-js/faker';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { VerificationResult } from '../../common/enums/submission';
@@ -15,6 +16,8 @@ import {
 } from '../../../test/constants';
 import { PGPConfigService } from '../../common/config/pgp-config.service';
 import { S3ConfigService } from '../../common/config/s3-config.service';
+import { generateRecordingResult } from '../job/fixtures';
+import { generatePostUrl } from '../submission/fixtures';
 import { Web3Service } from '../web3/web3.service';
 import { StorageService } from './storage.service';
 import { downloadFileFromUrl } from '../../common/utils/storage';
@@ -60,7 +63,7 @@ describe('StorageService', () => {
   let s3ConfigService: S3ConfigService;
 
   const signerMock = {
-    address: '0x1234567890123456789012345678901234567892',
+    address: faker.finance.ethereumAddress(),
     getNetwork: jest.fn().mockResolvedValue({ chainId: 1 }),
   };
 
@@ -103,10 +106,10 @@ describe('StorageService', () => {
       }));
     });
     it('should upload the solutions with encryption correctly', async () => {
-      const workerAddress = '0x1234567890123456789012345678901234567891';
-      const escrowAddress = '0x1234567890123456789012345678901234567890';
+      const workerAddress = faker.finance.ethereumAddress();
+      const escrowAddress = faker.finance.ethereumAddress();
       const chainId = ChainId.LOCALHOST;
-      const postUrl = 'https://x.com/example/status/12345';
+      const postUrl = generatePostUrl();
 
       storageService.minioClient.bucketExists = jest
         .fn()
@@ -117,11 +120,11 @@ describe('StorageService', () => {
       KVStoreUtils.getPublicKey = jest.fn().mockResolvedValue('publicKey');
       jest.spyOn(pgpConfigService, 'encrypt', 'get').mockReturnValue(true);
 
-      const jobSolution = {
+      const jobSolution = generateRecordingResult({
         workerAddress,
         postUrl,
         verificationResult: VerificationResult.ACCEPTED,
-      };
+      });
       const fileData = await storageService.uploadJobSolutions(
         escrowAddress,
         chainId,
@@ -145,20 +148,20 @@ describe('StorageService', () => {
     });
 
     it('should fail if the bucket does not exist', async () => {
-      const workerAddress = '0x1234567890123456789012345678901234567891';
-      const escrowAddress = '0x1234567890123456789012345678901234567890';
+      const workerAddress = faker.finance.ethereumAddress();
+      const escrowAddress = faker.finance.ethereumAddress();
       const chainId = ChainId.LOCALHOST;
-      const postUrl = 'https://x.com/example/status/12345';
+      const postUrl = generatePostUrl();
 
       storageService.minioClient.bucketExists = jest
         .fn()
         .mockResolvedValue(false);
 
-      const jobSolution = {
+      const jobSolution = generateRecordingResult({
         workerAddress,
         postUrl,
         verificationResult: VerificationResult.ACCEPTED,
-      };
+      });
       await expect(
         storageService.uploadJobSolutions(escrowAddress, chainId, [
           jobSolution,
@@ -167,10 +170,10 @@ describe('StorageService', () => {
     });
 
     it('should fail if the file cannot be uploaded', async () => {
-      const workerAddress = '0x1234567890123456789012345678901234567891';
-      const escrowAddress = '0x1234567890123456789012345678901234567890';
+      const workerAddress = faker.finance.ethereumAddress();
+      const escrowAddress = faker.finance.ethereumAddress();
       const chainId = ChainId.LOCALHOST;
-      const postUrl = 'https://x.com/example/status/12345';
+      const postUrl = generatePostUrl();
 
       storageService.minioClient.bucketExists = jest
         .fn()
@@ -179,11 +182,11 @@ describe('StorageService', () => {
         .fn()
         .mockRejectedValue('Network error');
       jest.spyOn(pgpConfigService, 'encrypt', 'get').mockReturnValue(false);
-      const jobSolution = {
+      const jobSolution = generateRecordingResult({
         workerAddress,
         postUrl,
         verificationResult: VerificationResult.ACCEPTED,
-      };
+      });
 
       await expect(
         storageService.uploadJobSolutions(escrowAddress, chainId, [
@@ -193,10 +196,10 @@ describe('StorageService', () => {
     });
 
     it('should fail if public key is missing', async () => {
-      const workerAddress = '0x1234567890123456789012345678901234567891';
-      const escrowAddress = '0x1234567890123456789012345678901234567890';
+      const workerAddress = faker.finance.ethereumAddress();
+      const escrowAddress = faker.finance.ethereumAddress();
       const chainId = ChainId.LOCALHOST;
-      const postUrl = 'https://x.com/example/status/12345';
+      const postUrl = generatePostUrl();
 
       storageService.minioClient.bucketExists = jest
         .fn()
@@ -204,11 +207,11 @@ describe('StorageService', () => {
       EncryptionUtils.encrypt = jest.fn().mockResolvedValue('encrypted');
       KVStoreUtils.getPublicKey = jest.fn().mockResolvedValue('');
       jest.spyOn(pgpConfigService, 'encrypt', 'get').mockReturnValue(true);
-      const jobSolution = {
+      const jobSolution = generateRecordingResult({
         workerAddress,
         postUrl,
         verificationResult: VerificationResult.ACCEPTED,
-      };
+      });
       await expect(
         storageService.uploadJobSolutions(escrowAddress, chainId, [
           jobSolution,
@@ -220,9 +223,9 @@ describe('StorageService', () => {
   describe('download', () => {
     const downloadFileFromUrlMock = jest.mocked(downloadFileFromUrl);
     it('should download the non encrypted file correctly', async () => {
-      const exchangeAddress = '0x1234567890123456789012345678901234567892';
-      const workerAddress = '0x1234567890123456789012345678901234567891';
-      const postUrl = 'https://x.com/example/status/12345';
+      const exchangeAddress = faker.finance.ethereumAddress();
+      const workerAddress = faker.finance.ethereumAddress();
+      const postUrl = generatePostUrl();
 
       const expectedJobFile = {
         exchangeAddress,
@@ -241,9 +244,9 @@ describe('StorageService', () => {
     });
 
     it('should download the encrypted file correctly', async () => {
-      const exchangeAddress = '0x1234567890123456789012345678901234567892';
-      const workerAddress = '0x1234567890123456789012345678901234567891';
-      const postUrl = 'https://x.com/example/status/12345';
+      const exchangeAddress = faker.finance.ethereumAddress();
+      const workerAddress = faker.finance.ethereumAddress();
+      const postUrl = generatePostUrl();
 
       const expectedJobFile = {
         exchangeAddress,
