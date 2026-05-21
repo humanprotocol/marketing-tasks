@@ -17,7 +17,7 @@ class TestValidationService extends ValidationService {
 describe('ValidationService', () => {
   let validationService: TestValidationService;
 
-  const manifest = generateManifest({ submissions_required: 1 });
+  const manifest = generateManifest({ submissionsRequired: 1 });
   const validationResult = generatePostValidationResult();
 
   beforeEach(async () => {
@@ -33,25 +33,29 @@ describe('ValidationService', () => {
     validationService = moduleRef.get(ValidationService);
   });
 
-  it('resolves validation results through the validation service token', async () => {
-    const postUrl = generatePostUrl();
-    validationService.validatePost.mockResolvedValue(validationResult);
+  describe('validatePost', () => {
+    describe('succeed', () => {
+      it('resolves validation results through the validation service token', async () => {
+        const postUrl = generatePostUrl();
+        validationService.validatePost.mockResolvedValue(validationResult);
 
-    await expect(
-      validationService.validatePost(postUrl, manifest),
-    ).resolves.toBe(validationResult);
+        await expect(
+          validationService.validatePost(postUrl, manifest),
+        ).resolves.toBe(validationResult);
 
-    expect(validationService.validatePost).toHaveBeenCalledWith(
-      postUrl,
-      manifest,
-    );
-  });
+        expect(validationService.validatePost).toHaveBeenCalledWith(
+          postUrl,
+          manifest,
+        );
+      });
 
-  it('allows implementations to return null when validation cannot be completed', async () => {
-    validationService.validatePost.mockResolvedValue(null);
+      it('allows implementations to return null when validation cannot be completed', async () => {
+        validationService.validatePost.mockResolvedValue(null);
 
-    await expect(
-      validationService.validatePost(faker.internet.url(), manifest),
-    ).resolves.toBeNull();
+        await expect(
+          validationService.validatePost(faker.internet.url(), manifest),
+        ).resolves.toBeNull();
+      });
+    });
   });
 });

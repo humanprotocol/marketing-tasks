@@ -107,77 +107,83 @@ describe('JobService', () => {
   });
 
   describe('createJob', () => {
-    it('returns an existing job without loading the manifest', async () => {
-      const job = generateJob({ chainId, escrowAddress });
-      jobRepository.findOneByChainIdAndEscrowAddress.mockResolvedValue(job);
+    describe('succeed', () => {
+      it('returns an existing job without loading the manifest', async () => {
+        const job = generateJob({ chainId, escrowAddress });
+        jobRepository.findOneByChainIdAndEscrowAddress.mockResolvedValue(job);
 
-      await expect(jobService.createJob(chainId, escrowAddress)).resolves.toBe(
-        job,
-      );
+        await expect(
+          jobService.createJob(chainId, escrowAddress),
+        ).resolves.toBe(job);
 
-      expect(web3Service.getSigner).not.toHaveBeenCalled();
-      expect(storageService.download).not.toHaveBeenCalled();
-      expect(jobRepository.createUnique).not.toHaveBeenCalled();
+        expect(web3Service.getSigner).not.toHaveBeenCalled();
+        expect(storageService.download).not.toHaveBeenCalled();
+        expect(jobRepository.createUnique).not.toHaveBeenCalled();
+      });
+
+      it('creates a job from a valid escrow manifest', async () => {
+        const manifestUrl = faker.internet.url();
+        const manifest = generateManifest();
+        const escrowClient = {
+          getManifest: jest.fn().mockResolvedValue(manifestUrl),
+        };
+
+        jobRepository.findOneByChainIdAndEscrowAddress.mockResolvedValue(null);
+        (EscrowClient.build as jest.Mock).mockResolvedValue(escrowClient);
+        storageService.download.mockResolvedValue(manifest);
+        jobRepository.createUnique.mockImplementation(async (job) => job);
+
+        const job = await jobService.createJob(chainId, escrowAddress);
+
+        expect(web3Service.getSigner).toHaveBeenCalledWith(chainId);
+        expect(escrowClient.getManifest).toHaveBeenCalledWith(escrowAddress);
+        expect(jobRepository.createUnique).toHaveBeenCalledWith(
+          expect.objectContaining({
+            chainId,
+            escrowAddress,
+            jobType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
+            manifestUrl,
+            endDate: new Date(manifest.endDate),
+          }),
+        );
+        expect(job.manifestUrl).toBe(manifestUrl);
+      });
     });
 
-    it('creates a job from a valid escrow manifest', async () => {
-      const manifestUrl = faker.internet.url();
-      const manifest = generateManifest();
-      const escrowClient = {
-        getManifest: jest.fn().mockResolvedValue(manifestUrl),
-      };
+    describe('fail', () => {
+      it('rejects manifests with unsupported job types', async () => {
+        const escrowClient = {
+          getManifest: jest.fn().mockResolvedValue(faker.internet.url()),
+        };
 
-      jobRepository.findOneByChainIdAndEscrowAddress.mockResolvedValue(null);
-      (EscrowClient.build as jest.Mock).mockResolvedValue(escrowClient);
-      storageService.download.mockResolvedValue(manifest);
-      jobRepository.createUnique.mockImplementation(async (job) => job);
+        jobRepository.findOneByChainIdAndEscrowAddress.mockResolvedValue(null);
+        (EscrowClient.build as jest.Mock).mockResolvedValue(escrowClient);
+        storageService.download.mockResolvedValue(
+          generateManifest({ jobType: 'unsupported' as JobRequestType }),
+        );
 
-      const job = await jobService.createJob(chainId, escrowAddress);
-
-      expect(web3Service.getSigner).toHaveBeenCalledWith(chainId);
-      expect(escrowClient.getManifest).toHaveBeenCalledWith(escrowAddress);
-      expect(jobRepository.createUnique).toHaveBeenCalledWith(
-        expect.objectContaining({
-          chainId,
-          escrowAddress,
-          jobType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
-          manifestUrl,
-          endDate: new Date(manifest.end_date),
-        }),
-      );
-      expect(job.manifestUrl).toBe(manifestUrl);
-    });
-
-    it('rejects manifests with unsupported job types', async () => {
-      const escrowClient = {
-        getManifest: jest.fn().mockResolvedValue(faker.internet.url()),
-      };
-
-      jobRepository.findOneByChainIdAndEscrowAddress.mockResolvedValue(null);
-      (EscrowClient.build as jest.Mock).mockResolvedValue(escrowClient);
-      storageService.download.mockResolvedValue(
-        generateManifest({ job_type: 'unsupported' as JobRequestType }),
-      );
-
-      await expect(
-        jobService.createJob(chainId, escrowAddress),
-      ).rejects.toThrow(ErrorJob.InvalidManifest);
-      expect(jobRepository.createUnique).not.toHaveBeenCalled();
+        await expect(
+          jobService.createJob(chainId, escrowAddress),
+        ).rejects.toThrow(ErrorJob.InvalidManifest);
+        expect(jobRepository.createUnique).not.toHaveBeenCalled();
+      });
     });
   });
 
   describe('handleProcessingError', () => {
-    it('increments retries and marks the job as failed at the retry limit', async () => {
-      const job = generateJob({ retriesCount: 4 });
+    describe('succeed', () => {
+      it('increments retries and marks the job as failed at the retry limit', async () => {
+        const job = generateJob({ retriesCount: 4 });
 
-      await jobService.handleProcessingError(job);
+        await jobService.handleProcessingError(job);
 
-      expect(jobRepository.updateOne).toHaveBeenCalledWith(
-        expect.objectContaining({
-          retriesCount: 5,
-          status: JobStatus.FAILED,
-        }),
-      );
+        expect(jobRepository.updateOne).toHaveBeenCalledWith(
+          expect.objectContaining({
+            retriesCount: 5,
+            status: JobStatus.FAILED,
+          }),
+        );
+      });
     });
   });
 
@@ -195,147 +201,161 @@ describe('JobService', () => {
       }),
     ];
 
-    it('does not store empty result sets', async () => {
-      await jobService.storeResults(generateJob(), 2, []);
+    describe('succeed', () => {
+      it('does not store empty result sets', async () => {
+        await jobService.storeResults(generateJob(), 2, []);
 
-      expect(storageService.uploadJobSolutions).not.toHaveBeenCalled();
-      expect(jobRepository.updateOne).not.toHaveBeenCalled();
+        expect(storageService.uploadJobSolutions).not.toHaveBeenCalled();
+        expect(jobRepository.updateOne).not.toHaveBeenCalled();
+      });
+
+      it('uploads results and stores the accepted reserved amount on-chain', async () => {
+        const job = generateJob({ chainId, escrowAddress });
+        const uploadedResults = {
+          url: faker.internet.url(),
+          hash: faker.string.hexadecimal({ length: 66 }),
+        };
+        const escrowClient = {
+          storeResults: jest.fn(),
+        };
+
+        (EscrowClient.build as jest.Mock).mockResolvedValue(escrowClient);
+        (EscrowUtils.getEscrow as jest.Mock).mockResolvedValue({
+          totalFundedAmount: 100n,
+        });
+        storageService.uploadJobSolutions.mockResolvedValue(uploadedResults);
+
+        await jobService.storeResults(job, 2, results);
+
+        expect(storageService.uploadJobSolutions).toHaveBeenCalledWith(
+          escrowAddress,
+          chainId,
+          results,
+        );
+        expect(escrowClient.storeResults).toHaveBeenCalledWith(
+          escrowAddress,
+          uploadedResults.url,
+          uploadedResults.hash,
+          50n,
+          { timeoutMs: 10_000 },
+        );
+        expect(jobRepository.updateOne).toHaveBeenCalledWith(
+          expect.objectContaining({ status: JobStatus.COMPLETED }),
+        );
+      });
     });
 
-    it('uploads results and stores the accepted reserved amount on-chain', async () => {
-      const job = generateJob({ chainId, escrowAddress });
-      const uploadedResults = {
-        url: faker.internet.url(),
-        hash: faker.string.hexadecimal({ length: 66 }),
-      };
-      const escrowClient = {
-        storeResults: jest.fn(),
-      };
+    describe('fail', () => {
+      it('fails when the escrow cannot be found', async () => {
+        (EscrowClient.build as jest.Mock).mockResolvedValue({
+          storeResults: jest.fn(),
+        });
+        (EscrowUtils.getEscrow as jest.Mock).mockResolvedValue(null);
+        storageService.uploadJobSolutions.mockResolvedValue({
+          url: faker.internet.url(),
+          hash: faker.string.hexadecimal({ length: 66 }),
+        });
 
-      (EscrowClient.build as jest.Mock).mockResolvedValue(escrowClient);
-      (EscrowUtils.getEscrow as jest.Mock).mockResolvedValue({
-        totalFundedAmount: 100n,
+        await expect(
+          jobService.storeResults(generateJob(), 2, results),
+        ).rejects.toThrow(ErrorCommon.EscrowNotFound);
       });
-      storageService.uploadJobSolutions.mockResolvedValue(uploadedResults);
-
-      await jobService.storeResults(job, 2, results);
-
-      expect(storageService.uploadJobSolutions).toHaveBeenCalledWith(
-        escrowAddress,
-        chainId,
-        results,
-      );
-      expect(escrowClient.storeResults).toHaveBeenCalledWith(
-        escrowAddress,
-        uploadedResults.url,
-        uploadedResults.hash,
-        50n,
-        { timeoutMs: 10_000 },
-      );
-      expect(jobRepository.updateOne).toHaveBeenCalledWith(
-        expect.objectContaining({ status: JobStatus.COMPLETED }),
-      );
-    });
-
-    it('fails when the escrow cannot be found', async () => {
-      (EscrowClient.build as jest.Mock).mockResolvedValue({
-        storeResults: jest.fn(),
-      });
-      (EscrowUtils.getEscrow as jest.Mock).mockResolvedValue(null);
-      storageService.uploadJobSolutions.mockResolvedValue({
-        url: faker.internet.url(),
-        hash: faker.string.hexadecimal({ length: 66 }),
-      });
-
-      await expect(
-        jobService.storeResults(generateJob(), 2, results),
-      ).rejects.toThrow(ErrorCommon.EscrowNotFound);
     });
   });
 
   describe('cancelJob', () => {
-    it('stores cancellation results, queues a webhook, and completes the local job', async () => {
-      const job = generateJob({ chainId, escrowAddress });
-      const intermediateResultsURL = faker.internet.url();
-      const intermediateResultsHash = faker.string.hexadecimal({ length: 66 });
-      const escrowClient = {
-        getRecordingOracleAddress: jest
-          .fn()
-          .mockResolvedValue(recordingOracleAddress),
-        getStatus: jest.fn().mockResolvedValue(EscrowStatus.ToCancel),
-        getIntermediateResultsUrl: jest
-          .fn()
-          .mockResolvedValue(intermediateResultsURL),
-        getIntermediateResultsHash: jest
-          .fn()
-          .mockResolvedValue(intermediateResultsHash),
-        storeResults: jest.fn(),
-      };
+    describe('succeed', () => {
+      it('stores cancellation results, queues a webhook, and completes the local job', async () => {
+        const job = generateJob({ chainId, escrowAddress });
+        const intermediateResultsURL = faker.internet.url();
+        const intermediateResultsHash = faker.string.hexadecimal({
+          length: 66,
+        });
+        const escrowClient = {
+          getRecordingOracleAddress: jest
+            .fn()
+            .mockResolvedValue(recordingOracleAddress),
+          getStatus: jest.fn().mockResolvedValue(EscrowStatus.ToCancel),
+          getIntermediateResultsUrl: jest
+            .fn()
+            .mockResolvedValue(intermediateResultsURL),
+          getIntermediateResultsHash: jest
+            .fn()
+            .mockResolvedValue(intermediateResultsHash),
+          storeResults: jest.fn(),
+        };
 
-      (EscrowClient.build as jest.Mock).mockResolvedValue(escrowClient);
-      jobRepository.findOneByChainIdAndEscrowAddress.mockResolvedValue(job);
+        (EscrowClient.build as jest.Mock).mockResolvedValue(escrowClient);
+        jobRepository.findOneByChainIdAndEscrowAddress.mockResolvedValue(job);
 
-      await expect(
-        jobService.cancelJob({ chainId, escrowAddress } as never),
-      ).resolves.toBe('Job canceled successfully.');
+        await expect(
+          jobService.cancelJob({ chainId, escrowAddress } as never),
+        ).resolves.toBe('Job canceled successfully.');
 
-      expect(escrowClient.storeResults).toHaveBeenCalledWith(
-        escrowAddress,
-        intermediateResultsURL,
-        intermediateResultsHash,
-        0n,
-        { timeoutMs: 10_000 },
-      );
-      expect(webhookRepository.createUnique).toHaveBeenCalledWith(
-        expect.objectContaining({
-          chainId,
+        expect(escrowClient.storeResults).toHaveBeenCalledWith(
           escrowAddress,
-          eventType: EventType.JOB_CANCELED,
-          status: WebhookStatus.PENDING,
-        }),
-      );
-      expect(jobRepository.updateOne).toHaveBeenCalledWith(
-        expect.objectContaining({ status: JobStatus.COMPLETED }),
-      );
+          intermediateResultsURL,
+          intermediateResultsHash,
+          0n,
+          { timeoutMs: 10_000 },
+        );
+        expect(webhookRepository.createUnique).toHaveBeenCalledWith(
+          expect.objectContaining({
+            chainId,
+            escrowAddress,
+            eventType: EventType.JOB_CANCELED,
+            status: WebhookStatus.PENDING,
+          }),
+        );
+        expect(jobRepository.updateOne).toHaveBeenCalledWith(
+          expect.objectContaining({ status: JobStatus.COMPLETED }),
+        );
+      });
     });
 
-    it('rejects when the configured signer is not the recording oracle', async () => {
-      (EscrowClient.build as jest.Mock).mockResolvedValue({
-        getRecordingOracleAddress: jest
-          .fn()
-          .mockResolvedValue(faker.finance.ethereumAddress()),
-      });
+    describe('fail', () => {
+      it('rejects when the configured signer is not the recording oracle', async () => {
+        (EscrowClient.build as jest.Mock).mockResolvedValue({
+          getRecordingOracleAddress: jest
+            .fn()
+            .mockResolvedValue(faker.finance.ethereumAddress()),
+        });
 
-      await expect(
-        jobService.cancelJob({ chainId, escrowAddress } as never),
-      ).rejects.toThrow(ErrorJob.AddressMismatches);
+        await expect(
+          jobService.cancelJob({ chainId, escrowAddress } as never),
+        ).rejects.toThrow(ErrorJob.AddressMismatches);
+      });
     });
   });
 
   describe('getManifest', () => {
-    it('downloads and validates a manifest', async () => {
-      const manifest = generateManifest();
-      storageService.download.mockResolvedValue(manifest);
+    describe('succeed', () => {
+      it('downloads and validates a manifest', async () => {
+        const manifest = generateManifest();
+        storageService.download.mockResolvedValue(manifest);
 
-      await expect(
-        jobService.getManifest(faker.internet.url()),
-      ).resolves.toEqual(
-        expect.objectContaining({
-          job_type: JobRequestType.SOCIAL_MEDIA_PROMOTION,
-          submissions_required: manifest.submissions_required,
-        }),
-      );
+        await expect(
+          jobService.getManifest(faker.internet.url()),
+        ).resolves.toEqual(
+          expect.objectContaining({
+            jobType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
+            submissionsRequired: manifest.submissionsRequired,
+          }),
+        );
+      });
     });
 
-    it('rejects invalid manifests', async () => {
-      storageService.download.mockResolvedValue({
-        ...generateManifest(),
-        submissions_required: 0,
-      });
+    describe('fail', () => {
+      it('rejects invalid manifests', async () => {
+        storageService.download.mockResolvedValue({
+          ...generateManifest(),
+          submissionsRequired: 0,
+        });
 
-      await expect(
-        jobService.getManifest(faker.internet.url()),
-      ).rejects.toBeInstanceOf(ValidationError);
+        await expect(
+          jobService.getManifest(faker.internet.url()),
+        ).rejects.toBeInstanceOf(ValidationError);
+      });
     });
   });
 });

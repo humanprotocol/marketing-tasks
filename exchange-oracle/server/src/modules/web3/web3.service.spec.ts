@@ -42,19 +42,23 @@ describe('Web3Service', () => {
   });
 
   describe('getSigner', () => {
-    it('should return a signer for a configured chainId', () => {
-      const validChainId = ChainId.POLYGON_AMOY;
+    describe('succeed', () => {
+      it('should return a signer for a configured chainId', () => {
+        const validChainId = ChainId.POLYGON_AMOY;
 
-      const signer = web3Service.getSigner(validChainId);
-      expect(signer).toBeDefined();
+        const signer = web3Service.getSigner(validChainId);
+        expect(signer).toBeDefined();
+      });
     });
 
-    it('should throw invalid chain id provided for configured networks', () => {
-      const invalidChainId = ChainId.POLYGON;
+    describe('fail', () => {
+      it('should throw invalid chain id provided for configured networks', () => {
+        const invalidChainId = ChainId.POLYGON;
 
-      expect(() => web3Service.getSigner(invalidChainId)).toThrow(
-        ErrorWeb3.InvalidChainId,
-      );
+        expect(() => web3Service.getSigner(invalidChainId)).toThrow(
+          ErrorWeb3.InvalidChainId,
+        );
+      });
     });
   });
 

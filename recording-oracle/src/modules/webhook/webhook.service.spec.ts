@@ -55,48 +55,58 @@ describe('WebhookService', () => {
     expect(webhookService).toBeDefined();
   });
 
-  it('queues an outgoing webhook', async () => {
-    await webhookService.createWebhook(
-      chainId,
-      escrowAddress,
-      EventType.JOB_COMPLETED,
-      { foo: 'bar' },
-    );
+  describe('createWebhook', () => {
+    describe('succeed', () => {
+      it('queues an outgoing webhook', async () => {
+        await webhookService.createWebhook(
+          chainId,
+          escrowAddress,
+          EventType.JOB_COMPLETED,
+          { foo: 'bar' },
+        );
 
-    expect(webhookRepository.createUnique).toHaveBeenCalledWith(
-      expect.objectContaining({
-        chainId,
-        escrowAddress,
-        eventType: EventType.JOB_COMPLETED,
-        eventData: { foo: 'bar' },
-        status: WebhookStatus.PENDING,
-      }),
-    );
+        expect(webhookRepository.createUnique).toHaveBeenCalledWith(
+          expect.objectContaining({
+            chainId,
+            escrowAddress,
+            eventType: EventType.JOB_COMPLETED,
+            eventData: { foo: 'bar' },
+            status: WebhookStatus.PENDING,
+          }),
+        );
+      });
+    });
   });
 
-  it('marks an outgoing webhook as failed after max retries', async () => {
-    const webhook = generateWebhook({
-      chainId,
-      escrowAddress,
-      eventType: EventType.JOB_COMPLETED,
-      eventData: null,
-      retriesCount: 4,
-      status: WebhookStatus.PENDING,
-      waitUntil: new Date(),
+  describe('processPendingWebhooks', () => {
+    describe('fail', () => {
+      it('marks an outgoing webhook as failed after max retries', async () => {
+        const webhook = generateWebhook({
+          chainId,
+          escrowAddress,
+          eventType: EventType.JOB_COMPLETED,
+          eventData: null,
+          retriesCount: 4,
+          status: WebhookStatus.PENDING,
+          waitUntil: new Date(),
+        });
+
+        jest
+          .spyOn(webhookRepository, 'findByStatus')
+          .mockResolvedValue([webhook]);
+        jest
+          .spyOn(webhookService, 'sendWebhook')
+          .mockRejectedValue(new Error('HTTP request failed'));
+
+        await webhookService.processPendingWebhooks();
+
+        expect(webhookRepository.updateOne).toHaveBeenCalledWith(
+          expect.objectContaining({
+            retriesCount: 5,
+            status: WebhookStatus.FAILED,
+          }),
+        );
+      });
     });
-
-    jest.spyOn(webhookRepository, 'findByStatus').mockResolvedValue([webhook]);
-    jest
-      .spyOn(webhookService, 'sendWebhook')
-      .mockRejectedValue(new Error('HTTP request failed'));
-
-    await webhookService.processPendingWebhooks();
-
-    expect(webhookRepository.updateOne).toHaveBeenCalledWith(
-      expect.objectContaining({
-        retriesCount: 5,
-        status: WebhookStatus.FAILED,
-      }),
-    );
   });
 });

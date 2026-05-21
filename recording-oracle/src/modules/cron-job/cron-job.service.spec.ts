@@ -76,163 +76,173 @@ describe('CronJobService', () => {
   });
 
   describe('startCronJob', () => {
-    it('creates a cron job state when none exists', async () => {
-      const cronJob = generateCronJob({ completedAt: null });
-      cronJobRepository.findOneByType.mockResolvedValue(null);
-      cronJobRepository.createUnique.mockResolvedValue(cronJob);
+    describe('succeed', () => {
+      it('creates a cron job state when none exists', async () => {
+        const cronJob = generateCronJob({ completedAt: null });
+        cronJobRepository.findOneByType.mockResolvedValue(null);
+        cronJobRepository.createUnique.mockResolvedValue(cronJob);
 
-      await expect(
-        cronJobService.startCronJob(
+        await expect(
+          cronJobService.startCronJob(
+            CronJobType.ProcessJobsAfterSubmissionDeadline,
+          ),
+        ).resolves.toBe(cronJob);
+
+        expect(cronJobRepository.createUnique).toHaveBeenCalledWith(
+          expect.objectContaining({
+            cronJobType: CronJobType.ProcessJobsAfterSubmissionDeadline,
+            completedAt: null,
+          }),
+        );
+      });
+
+      it('restarts an existing cron job state', async () => {
+        const cronJob = generateCronJob();
+        cronJobRepository.findOneByType.mockResolvedValue(cronJob);
+        cronJobRepository.updateOne.mockImplementation(async (value) => value);
+
+        await cronJobService.startCronJob(
           CronJobType.ProcessJobsAfterSubmissionDeadline,
-        ),
-      ).resolves.toBe(cronJob);
+        );
 
-      expect(cronJobRepository.createUnique).toHaveBeenCalledWith(
-        expect.objectContaining({
-          cronJobType: CronJobType.ProcessJobsAfterSubmissionDeadline,
-          completedAt: null,
-        }),
-      );
-    });
-
-    it('restarts an existing cron job state', async () => {
-      const cronJob = generateCronJob();
-      cronJobRepository.findOneByType.mockResolvedValue(cronJob);
-      cronJobRepository.updateOne.mockImplementation(async (value) => value);
-
-      await cronJobService.startCronJob(
-        CronJobType.ProcessJobsAfterSubmissionDeadline,
-      );
-
-      expect(cronJobRepository.updateOne).toHaveBeenCalledWith(
-        expect.objectContaining({ completedAt: null }),
-      );
+        expect(cronJobRepository.updateOne).toHaveBeenCalledWith(
+          expect.objectContaining({ completedAt: null }),
+        );
+      });
     });
   });
 
   describe('processJobsAfterSubmissionDeadline', () => {
-    it('does not process jobs when the cron job is already running', async () => {
-      cronJobRepository.findOneByType.mockResolvedValue(
-        generateCronJob({ completedAt: null }),
-      );
+    describe('succeed', () => {
+      it('does not process jobs when the cron job is already running', async () => {
+        cronJobRepository.findOneByType.mockResolvedValue(
+          generateCronJob({ completedAt: null }),
+        );
 
-      await cronJobService.processJobsAfterSubmissionDeadline();
+        await cronJobService.processJobsAfterSubmissionDeadline();
 
-      expect(jobService.getJobsAfterSubmissionDeadline).not.toHaveBeenCalled();
-    });
+        expect(
+          jobService.getJobsAfterSubmissionDeadline,
+        ).not.toHaveBeenCalled();
+      });
 
-    it('processes pending submissions, keeps existing results, stores results, and queues completion webhooks', async () => {
-      const manifest = generateManifest({ submissions_required: 3 });
-      const pendingSubmission = generateSubmission();
-      const acceptedSubmission = generateSubmission({
-        status: SubmissionStatus.ACCEPTED,
-      });
-      const rejectedSubmission = generateSubmission({
-        status: SubmissionStatus.REJECTED,
-        reason: faker.lorem.sentence(),
-      });
-      const failedSubmission = generateSubmission({
-        status: SubmissionStatus.FAILED,
-      });
-      const job = generateJob({
-        chainId,
-        escrowAddress,
-        endDate: faker.date.past(),
-        submissions: [
+      it('processes pending submissions, keeps existing results, stores results, and queues completion webhooks', async () => {
+        const manifest = generateManifest({ submissionsRequired: 3 });
+        const pendingSubmission = generateSubmission();
+        const acceptedSubmission = generateSubmission({
+          status: SubmissionStatus.ACCEPTED,
+        });
+        const rejectedSubmission = generateSubmission({
+          status: SubmissionStatus.REJECTED,
+          reason: faker.lorem.sentence(),
+        });
+        const failedSubmission = generateSubmission({
+          status: SubmissionStatus.FAILED,
+        });
+        const job = generateJob({
+          chainId,
+          escrowAddress,
+          endDate: faker.date.past(),
+          submissions: [
+            pendingSubmission,
+            acceptedSubmission,
+            rejectedSubmission,
+            failedSubmission,
+          ],
+        });
+        const processedResult: IRecordingResult = {
+          workerAddress: pendingSubmission.workerAddress,
+          postUrl: pendingSubmission.postUrl,
+          verificationResult: VerificationResult.ACCEPTED,
+        };
+
+        cronJobRepository.findOneByType.mockResolvedValue(null);
+        cronJobRepository.createUnique.mockResolvedValue(generateCronJob());
+        jobService.getJobsAfterSubmissionDeadline.mockResolvedValue([job]);
+        jobService.getManifest.mockResolvedValue(manifest);
+        submissionService.processSubmission.mockResolvedValue(processedResult);
+
+        await cronJobService.processJobsAfterSubmissionDeadline();
+
+        expect(submissionService.processSubmission).toHaveBeenCalledWith(
           pendingSubmission,
-          acceptedSubmission,
-          rejectedSubmission,
-          failedSubmission,
-        ],
+          manifest,
+        );
+        expect(jobService.storeResults).toHaveBeenCalledWith(
+          job,
+          manifest.submissionsRequired,
+          [
+            processedResult,
+            {
+              workerAddress: acceptedSubmission.workerAddress,
+              postUrl: acceptedSubmission.postUrl,
+              verificationResult: VerificationResult.ACCEPTED,
+            },
+            {
+              workerAddress: rejectedSubmission.workerAddress,
+              postUrl: rejectedSubmission.postUrl,
+              verificationResult: VerificationResult.REJECTED,
+              rejectionReason: rejectedSubmission.reason,
+            },
+          ],
+        );
+        expect(webhookService.createWebhook).toHaveBeenCalledWith(
+          chainId,
+          escrowAddress,
+          EventType.JOB_COMPLETED,
+        );
+        expect(cronJobRepository.updateOne).toHaveBeenCalledWith(
+          expect.objectContaining({ completedAt: expect.any(Date) }),
+        );
       });
-      const processedResult: IRecordingResult = {
-        workerAddress: pendingSubmission.workerAddress,
-        postUrl: pendingSubmission.postUrl,
-        verificationResult: VerificationResult.ACCEPTED,
-      };
-
-      cronJobRepository.findOneByType.mockResolvedValue(null);
-      cronJobRepository.createUnique.mockResolvedValue(generateCronJob());
-      jobService.getJobsAfterSubmissionDeadline.mockResolvedValue([job]);
-      jobService.getManifest.mockResolvedValue(manifest);
-      submissionService.processSubmission.mockResolvedValue(processedResult);
-
-      await cronJobService.processJobsAfterSubmissionDeadline();
-
-      expect(submissionService.processSubmission).toHaveBeenCalledWith(
-        pendingSubmission,
-        manifest,
-      );
-      expect(jobService.storeResults).toHaveBeenCalledWith(
-        job,
-        manifest.submissions_required,
-        [
-          processedResult,
-          {
-            workerAddress: acceptedSubmission.workerAddress,
-            postUrl: acceptedSubmission.postUrl,
-            verificationResult: VerificationResult.ACCEPTED,
-          },
-          {
-            workerAddress: rejectedSubmission.workerAddress,
-            postUrl: rejectedSubmission.postUrl,
-            verificationResult: VerificationResult.REJECTED,
-            rejectionReason: rejectedSubmission.reason,
-          },
-        ],
-      );
-      expect(webhookService.createWebhook).toHaveBeenCalledWith(
-        chainId,
-        escrowAddress,
-        EventType.JOB_COMPLETED,
-      );
-      expect(cronJobRepository.updateOne).toHaveBeenCalledWith(
-        expect.objectContaining({ completedAt: expect.any(Date) }),
-      );
     });
 
-    it('marks a job processing error for retry and still completes the cron job', async () => {
-      const job = generateJob();
+    describe('fail', () => {
+      it('marks a job processing error for retry and still completes the cron job', async () => {
+        const job = generateJob();
 
-      cronJobRepository.findOneByType.mockResolvedValue(null);
-      cronJobRepository.createUnique.mockResolvedValue(generateCronJob());
-      jobService.getJobsAfterSubmissionDeadline.mockResolvedValue([job]);
-      jobService.getManifest.mockRejectedValue(new Error('Invalid manifest'));
+        cronJobRepository.findOneByType.mockResolvedValue(null);
+        cronJobRepository.createUnique.mockResolvedValue(generateCronJob());
+        jobService.getJobsAfterSubmissionDeadline.mockResolvedValue([job]);
+        jobService.getManifest.mockRejectedValue(new Error('Invalid manifest'));
 
-      await cronJobService.processJobsAfterSubmissionDeadline();
+        await cronJobService.processJobsAfterSubmissionDeadline();
 
-      expect(jobService.handleProcessingError).toHaveBeenCalledWith(job);
-      expect(cronJobRepository.updateOne).toHaveBeenCalledWith(
-        expect.objectContaining({ completedAt: expect.any(Date) }),
-      );
+        expect(jobService.handleProcessingError).toHaveBeenCalledWith(job);
+        expect(cronJobRepository.updateOne).toHaveBeenCalledWith(
+          expect.objectContaining({ completedAt: expect.any(Date) }),
+        );
+      });
     });
   });
 
   describe('processPendingOutgoingWebhooks', () => {
-    it('does not process outgoing webhooks when the cron job is already running', async () => {
-      cronJobRepository.findOneByType.mockResolvedValue(
-        generateCronJob({ completedAt: null }),
-      );
+    describe('succeed', () => {
+      it('does not process outgoing webhooks when the cron job is already running', async () => {
+        cronJobRepository.findOneByType.mockResolvedValue(
+          generateCronJob({ completedAt: null }),
+        );
 
-      await cronJobService.processPendingOutgoingWebhooks();
+        await cronJobService.processPendingOutgoingWebhooks();
 
-      expect(webhookService.processPendingWebhooks).not.toHaveBeenCalled();
-    });
+        expect(webhookService.processPendingWebhooks).not.toHaveBeenCalled();
+      });
 
-    it('processes pending outgoing webhooks and completes the cron job', async () => {
-      cronJobRepository.findOneByType.mockResolvedValue(null);
-      cronJobRepository.createUnique.mockResolvedValue(
-        generateCronJob({
-          cronJobType: CronJobType.ProcessPendingOutgoingWebhooks,
-        }),
-      );
+      it('processes pending outgoing webhooks and completes the cron job', async () => {
+        cronJobRepository.findOneByType.mockResolvedValue(null);
+        cronJobRepository.createUnique.mockResolvedValue(
+          generateCronJob({
+            cronJobType: CronJobType.ProcessPendingOutgoingWebhooks,
+          }),
+        );
 
-      await cronJobService.processPendingOutgoingWebhooks();
+        await cronJobService.processPendingOutgoingWebhooks();
 
-      expect(webhookService.processPendingWebhooks).toHaveBeenCalled();
-      expect(cronJobRepository.updateOne).toHaveBeenCalledWith(
-        expect.objectContaining({ completedAt: expect.any(Date) }),
-      );
+        expect(webhookService.processPendingWebhooks).toHaveBeenCalled();
+        expect(cronJobRepository.updateOne).toHaveBeenCalledWith(
+          expect.objectContaining({ completedAt: expect.any(Date) }),
+        );
+      });
     });
   });
 });

@@ -61,167 +61,175 @@ describe('GrokService', () => {
     expect(grokService).toBeDefined();
   });
 
-  it('calls Grok responses API and normalizes optional requirements', async () => {
-    const postUrl = generatePostUrl();
-    const manifest = generateManifest({ submissions_required: 1 });
+  describe('validatePost', () => {
+    describe('succeed', () => {
+      it('calls Grok responses API and normalizes optional requirements', async () => {
+        const postUrl = generatePostUrl();
+        const manifest = generateManifest({ submissionsRequired: 1 });
 
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: jest
-        .fn()
-        .mockResolvedValue(
-          generateGrokResponse(JSON.stringify(validationResult)),
-        ),
-    });
+        fetchMock.mockResolvedValue({
+          ok: true,
+          json: jest
+            .fn()
+            .mockResolvedValue(
+              generateGrokResponse(JSON.stringify(validationResult)),
+            ),
+        });
 
-    await expect(grokService.validatePost(postUrl, manifest)).resolves.toEqual(
-      expect.objectContaining({
-        postExists: true,
-        isPublic: true,
-        hasRequiredHashtags: true,
-        hasRequiredKeywords: true,
-        hasRequiredLink: true,
-        meetsMinLength: true,
-        hasRequiredMedia: true,
-        meetsMinFollowers: true,
-        meetsMinAccountAgeDays: true,
-        meetsMinLiveDurationHours: true,
-        meetsMinLikes: true,
-        meetsMinReposts: true,
-      }),
-    );
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      `${baseUrl}/responses`,
-      expect.objectContaining({
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-      }),
-    );
-
-    const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(requestBody).toEqual(
-      expect.objectContaining({
-        model,
-        store: false,
-        max_output_tokens: 60,
-        input: [
-          {
-            role: 'system',
-            content: GROK_VALIDATION_SYSTEM_PROMPT,
-          },
+        await expect(
+          grokService.validatePost(postUrl, manifest),
+        ).resolves.toEqual(
           expect.objectContaining({
-            role: 'user',
-            content: expect.stringContaining(postUrl),
+            postExists: true,
+            isPublic: true,
+            hasRequiredHashtags: true,
+            hasRequiredKeywords: true,
+            hasRequiredLink: true,
+            meetsMinLength: true,
+            hasRequiredMedia: true,
+            meetsMinFollowers: true,
+            meetsMinAccountAgeDays: true,
+            meetsMinLiveDurationHours: true,
+            meetsMinLikes: true,
+            meetsMinReposts: true,
           }),
-        ],
-        tools: [{ type: 'x_search' }],
-        text: {
-          format: {
-            type: 'json_schema',
-            name: GROK_VALIDATION_RESPONSE_SCHEMA.json_schema.name,
-            schema: GROK_VALIDATION_RESPONSE_SCHEMA.json_schema.schema,
-            strict: true,
+        );
+
+        expect(fetchMock).toHaveBeenCalledWith(
+          `${baseUrl}/responses`,
+          expect.objectContaining({
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${apiKey}`,
+            },
+          }),
+        );
+
+        const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+        expect(requestBody).toEqual(
+          expect.objectContaining({
+            model,
+            store: false,
+            max_output_tokens: 60,
+            input: [
+              {
+                role: 'system',
+                content: GROK_VALIDATION_SYSTEM_PROMPT,
+              },
+              expect.objectContaining({
+                role: 'user',
+                content: expect.stringContaining(postUrl),
+              }),
+            ],
+            tools: [{ type: 'x_search' }],
+            text: {
+              format: {
+                type: 'json_schema',
+                name: GROK_VALIDATION_RESPONSE_SCHEMA.json_schema.name,
+                schema: GROK_VALIDATION_RESPONSE_SCHEMA.json_schema.schema,
+                strict: true,
+              },
+            },
+          }),
+        );
+      });
+
+      it('keeps failed booleans when the related manifest requirement is enabled', async () => {
+        const manifest = generateManifest({
+          requirements: {
+            requiredHashtags: ['HumanProtocol'],
+            requiredKeywords: ['oracle'],
+            requiredLink: faker.internet.url(),
+            minLength: 20,
+            requiresMedia: true,
+            minFollowers: 100,
+            minAccountAgeDays: 30,
+            minLiveDurationHours: 12,
+            minLikes: 10,
+            minReposts: 5,
           },
-        },
-      }),
-    );
-  });
+        });
 
-  it('keeps failed booleans when the related manifest requirement is enabled', async () => {
-    const manifest = generateManifest({
-      requirements: {
-        required_hashtags: ['HumanProtocol'],
-        required_keywords: ['oracle'],
-        required_link: faker.internet.url(),
-        min_length: 20,
-        requires_media: true,
-        min_followers: 100,
-        min_account_age_days: 30,
-        min_live_duration_hours: 12,
-        min_likes: 10,
-        min_reposts: 5,
-      },
+        fetchMock.mockResolvedValue({
+          ok: true,
+          json: jest
+            .fn()
+            .mockResolvedValue(
+              generateGrokResponse(JSON.stringify(validationResult)),
+            ),
+        });
+
+        await expect(
+          grokService.validatePost(faker.internet.url(), manifest),
+        ).resolves.toEqual(validationResult);
+      });
+
+      it('returns null when the model response cannot be parsed', async () => {
+        fetchMock.mockResolvedValue({
+          ok: true,
+          json: jest.fn().mockResolvedValue(generateGrokResponse('not-json')),
+        });
+
+        await expect(
+          grokService.validatePost(faker.internet.url(), generateManifest()),
+        ).resolves.toBeNull();
+      });
+
+      it('returns null when the response text is missing', async () => {
+        fetchMock.mockResolvedValue({
+          ok: true,
+          json: jest.fn().mockResolvedValue({ output: [] }),
+        });
+
+        await expect(
+          grokService.validatePost(faker.internet.url(), generateManifest()),
+        ).resolves.toBeNull();
+      });
     });
 
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: jest
-        .fn()
-        .mockResolvedValue(
-          generateGrokResponse(JSON.stringify(validationResult)),
-        ),
+    describe('fail', () => {
+      it('throws a server error when Grok returns a non-ok response', async () => {
+        const errorMessage = faker.lorem.sentence();
+
+        fetchMock.mockResolvedValue({
+          ok: false,
+          status: 429,
+          json: jest.fn().mockResolvedValue({
+            error: {
+              message: errorMessage,
+            },
+          }),
+        });
+
+        await expect(
+          grokService.validatePost(faker.internet.url(), generateManifest()),
+        ).rejects.toThrow(errorMessage);
+      });
+
+      it('throws a fallback server error when Grok omits an error message', async () => {
+        fetchMock.mockResolvedValue({
+          ok: false,
+          status: 500,
+          json: jest.fn().mockResolvedValue({}),
+        });
+
+        await expect(
+          grokService.validatePost(faker.internet.url(), generateManifest()),
+        ).rejects.toThrow('Grok API request failed with HTTP 500');
+      });
+
+      it('uses the ServerError class for failed Grok requests', async () => {
+        fetchMock.mockResolvedValue({
+          ok: false,
+          status: 503,
+          json: jest.fn().mockResolvedValue({}),
+        });
+
+        await expect(
+          grokService.validatePost(faker.internet.url(), generateManifest()),
+        ).rejects.toBeInstanceOf(ServerError);
+      });
     });
-
-    await expect(
-      grokService.validatePost(faker.internet.url(), manifest),
-    ).resolves.toEqual(validationResult);
-  });
-
-  it('throws a server error when Grok returns a non-ok response', async () => {
-    const errorMessage = faker.lorem.sentence();
-
-    fetchMock.mockResolvedValue({
-      ok: false,
-      status: 429,
-      json: jest.fn().mockResolvedValue({
-        error: {
-          message: errorMessage,
-        },
-      }),
-    });
-
-    await expect(
-      grokService.validatePost(faker.internet.url(), generateManifest()),
-    ).rejects.toThrow(errorMessage);
-  });
-
-  it('throws a fallback server error when Grok omits an error message', async () => {
-    fetchMock.mockResolvedValue({
-      ok: false,
-      status: 500,
-      json: jest.fn().mockResolvedValue({}),
-    });
-
-    await expect(
-      grokService.validatePost(faker.internet.url(), generateManifest()),
-    ).rejects.toThrow('Grok API request failed with HTTP 500');
-  });
-
-  it('returns null when the model response cannot be parsed', async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: jest.fn().mockResolvedValue(generateGrokResponse('not-json')),
-    });
-
-    await expect(
-      grokService.validatePost(faker.internet.url(), generateManifest()),
-    ).resolves.toBeNull();
-  });
-
-  it('returns null when the response text is missing', async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: jest.fn().mockResolvedValue({ output: [] }),
-    });
-
-    await expect(
-      grokService.validatePost(faker.internet.url(), generateManifest()),
-    ).resolves.toBeNull();
-  });
-
-  it('uses the ServerError class for failed Grok requests', async () => {
-    fetchMock.mockResolvedValue({
-      ok: false,
-      status: 503,
-      json: jest.fn().mockResolvedValue({}),
-    });
-
-    await expect(
-      grokService.validatePost(faker.internet.url(), generateManifest()),
-    ).rejects.toBeInstanceOf(ServerError);
   });
 });

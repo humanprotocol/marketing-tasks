@@ -142,168 +142,29 @@ describe('AssignmentService', () => {
           } as any,
         );
 
-      expect(result).toEqual(undefined);
-      expect(assignmentRepository.createUnique).toHaveBeenCalledWith({
-        job: {
-          id: 1,
-          manifestUrl: MOCK_MANIFEST_URL,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.ACTIVE,
-        },
-        workerAddress: workerAddress,
-        status: AssignmentStatus.ACTIVE,
-        expiresAt: expect.any(Date),
-        rewardAmount: 20,
-      });
-      expect(jobService.getManifest).toHaveBeenCalledWith(
-        chainId,
-        escrowAddress,
-        MOCK_MANIFEST_URL,
-      );
-      expect(jobService.getRewardAmount).toHaveBeenCalledWith(
-        chainId,
-        escrowAddress,
-        manifest.submissionsRequired,
-      );
-    });
-
-    it('should reassign user who has previously canceled', async () => {
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue({
-          id: 1,
-          manifestUrl: MOCK_MANIFEST_URL,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.ACTIVE,
-        } as any);
-      jest
-        .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
-        .mockResolvedValue({ id: 1, status: AssignmentStatus.CANCELED } as any);
-
-      const result = await assignmentService.createAssignment(
-        createAssignmentDto,
-        {
-          address: workerAddress,
-          reputationNetwork: reputationNetwork,
-        } as any,
-      );
-
-      expect(result).toEqual(undefined);
-      expect(assignmentRepository.updateOne).toHaveBeenCalledWith({
-        id: 1,
-        status: AssignmentStatus.ACTIVE,
-      });
-      expect(jobService.getManifest).toHaveBeenCalledWith(
-        chainId,
-        escrowAddress,
-        MOCK_MANIFEST_URL,
-      );
-    });
-
-    it('should fail if escrow address is invalid', async () => {
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue(null);
-
-      await expect(
-        assignmentService.createAssignment(createAssignmentDto, {
-          address: workerAddress,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.ACTIVE,
-        } as any),
-      ).rejects.toThrow('Job not found');
-    });
-
-    it('should fail if job is not in the same reputation network', async () => {
-      const differentReputationNetwork =
-        '0x1234567890123456789012345678901234567893';
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue({
-          id: 1,
-          manifestUrl: MOCK_MANIFEST_URL,
-          reputationNetwork: differentReputationNetwork,
-          status: JobStatus.ACTIVE,
-        } as any);
-
-      await expect(
-        assignmentService.createAssignment(createAssignmentDto, {
-          address: workerAddress,
-          reputationNetwork: reputationNetwork,
-        } as any),
-      ).rejects.toThrow('Requested job is not in your reputation network');
-    });
-
-    it('should fail if job is not active', async () => {
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue({
-          id: 1,
-          manifestUrl: MOCK_MANIFEST_URL,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.CANCELED,
-        } as any);
-
-      await expect(
-        assignmentService.createAssignment(createAssignmentDto, {
-          address: workerAddress,
-          reputationNetwork: reputationNetwork,
-        } as any),
-      ).rejects.toThrow(ErrorJob.InvalidStatus);
-    });
-
-    it('should fail if user already assigned', async () => {
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue({
-          id: 1,
-          manifestUrl: MOCK_MANIFEST_URL,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.ACTIVE,
-        } as any);
-      jest
-        .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
-        .mockResolvedValue({ id: 1, status: AssignmentStatus.REJECTED } as any);
-
-      await expect(
-        assignmentService.createAssignment(createAssignmentDto, {
-          address: workerAddress,
-          reputationNetwork: reputationNetwork,
-        } as any),
-      ).rejects.toThrow('Assignment already exists');
-    });
-
-    it('should fail if job is fully assigned', async () => {
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue({
-          id: 1,
-          manifestUrl: MOCK_MANIFEST_URL,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.ACTIVE,
-        } as any);
-      jest
-        .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
-        .mockResolvedValue(null);
-      jest.spyOn(assignmentRepository, 'countByJobId').mockResolvedValue(5);
-      jest.spyOn(jobService, 'getManifest').mockResolvedValue(manifest);
-
-      await expect(
-        assignmentService.createAssignment(createAssignmentDto, {
-          address: workerAddress,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.ACTIVE,
-        } as any),
-      ).rejects.toThrow('Fully assigned job');
-    });
-
-    it('should fail if there is not enough time left for min live duration', async () => {
-      const expiringManifest: ManifestDto = createManifest({
-        endDate: new Date(Date.now() + 30 * 60 * 1000).getTime(),
-        requirements: {
-          ...manifest.requirements,
-          minLiveDurationHours: 2,
-        },
+        expect(result).toEqual(undefined);
+        expect(assignmentRepository.createUnique).toHaveBeenCalledWith({
+          job: {
+            id: 1,
+            manifestUrl: MOCK_MANIFEST_URL,
+            reputationNetwork: reputationNetwork,
+            status: JobStatus.ACTIVE,
+          },
+          workerAddress: workerAddress,
+          status: AssignmentStatus.ACTIVE,
+          expiresAt: expect.any(Date),
+          rewardAmount: 20,
+        });
+        expect(jobService.getManifest).toHaveBeenCalledWith(
+          chainId,
+          escrowAddress,
+          MOCK_MANIFEST_URL,
+        );
+        expect(jobService.getRewardAmount).toHaveBeenCalledWith(
+          chainId,
+          escrowAddress,
+          manifest.submissionsRequired,
+        );
       });
 
       it('should reassign user who has previously canceled', async () => {
@@ -446,10 +307,10 @@ describe('AssignmentService', () => {
 
       it('should fail if there is not enough time left for min live duration', async () => {
         const expiringManifest: ManifestDto = createManifest({
-          end_date: new Date(Date.now() + 30 * 60 * 1000).getTime(),
+          endDate: new Date(Date.now() + 30 * 60 * 1000).getTime(),
           requirements: {
             ...manifest.requirements,
-            min_live_duration_hours: 2,
+            minLiveDurationHours: 2,
           },
         });
 

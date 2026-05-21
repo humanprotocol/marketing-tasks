@@ -8,17 +8,17 @@ import { JobEntity } from '../job.entity';
 export const generateManifest = (
   overrides: Partial<IManifest> = {},
 ): IManifest => ({
-  job_type: JobRequestType.SOCIAL_MEDIA_PROMOTION,
-  end_date: faker.date.future().getTime(),
+  jobType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
+  endDate: faker.date.future().getTime(),
   platforms: ['x'],
-  submissions_required: 2,
+  submissionsRequired: 2,
   campaign: {
     name: faker.company.name(),
     description: faker.lorem.sentence(),
   },
   requirements: {},
-  ai_validation: {
-    allowed_abuse_probability: 'medium',
+  aiValidation: {
+    allowedAbuseProbability: 'medium',
   },
   ...overrides,
 });

@@ -73,51 +73,56 @@ describe('SubmissionService', () => {
     expect(submissionService).toBeDefined();
   });
 
-  it('creates a submission with a normalized post URL', async () => {
-    await expect(submissionService.createSubmission(webhook)).resolves.toBe(
-      'Submission received.',
-    );
+  describe('createSubmission', () => {
+    describe('succeed', () => {
+      it('creates a submission with a normalized post URL', async () => {
+        await expect(submissionService.createSubmission(webhook)).resolves.toBe(
+          'Submission received.',
+        );
 
-    expect(
-      submissionRepository.findOneByJobIdAndWorkerAddress,
-    ).toHaveBeenCalledWith(1, workerAddress);
-    expect(submissionRepository.findOneByJobIdAndPostUrl).toHaveBeenCalledWith(
-      1,
-      normalizedPostUrl,
-    );
-    expect(submissionRepository.createUnique).toHaveBeenCalledWith(
-      expect.objectContaining({
-        jobId: 1,
-        workerAddress,
-        postUrl: normalizedPostUrl,
-      }),
-    );
-  });
+        expect(
+          submissionRepository.findOneByJobIdAndWorkerAddress,
+        ).toHaveBeenCalledWith(1, workerAddress);
+        expect(
+          submissionRepository.findOneByJobIdAndPostUrl,
+        ).toHaveBeenCalledWith(1, normalizedPostUrl);
+        expect(submissionRepository.createUnique).toHaveBeenCalledWith(
+          expect.objectContaining({
+            jobId: 1,
+            workerAddress,
+            postUrl: normalizedPostUrl,
+          }),
+        );
+      });
+    });
 
-  it('rejects when the worker already submitted for the job', async () => {
-    submissionRepository.findOneByJobIdAndWorkerAddress.mockResolvedValue({
-      id: 1,
-    } as any);
+    describe('fail', () => {
+      it('rejects when the worker already submitted for the job', async () => {
+        submissionRepository.findOneByJobIdAndWorkerAddress.mockResolvedValue({
+          id: 1,
+        } as any);
 
-    await expect(submissionService.createSubmission(webhook)).rejects.toThrow(
-      ErrorJob.SolutionAlreadyExists,
-    );
+        await expect(
+          submissionService.createSubmission(webhook),
+        ).rejects.toThrow(ErrorJob.SolutionAlreadyExists);
 
-    expect(
-      submissionRepository.findOneByJobIdAndPostUrl,
-    ).not.toHaveBeenCalled();
-    expect(submissionRepository.createUnique).not.toHaveBeenCalled();
-  });
+        expect(
+          submissionRepository.findOneByJobIdAndPostUrl,
+        ).not.toHaveBeenCalled();
+        expect(submissionRepository.createUnique).not.toHaveBeenCalled();
+      });
 
-  it('rejects duplicate post URLs for the same job', async () => {
-    submissionRepository.findOneByJobIdAndPostUrl.mockResolvedValue({
-      id: 2,
-    } as any);
+      it('rejects duplicate post URLs for the same job', async () => {
+        submissionRepository.findOneByJobIdAndPostUrl.mockResolvedValue({
+          id: 2,
+        } as any);
 
-    await expect(submissionService.createSubmission(webhook)).rejects.toThrow(
-      SubmissionRejectionReason.DuplicateSubmission,
-    );
+        await expect(
+          submissionService.createSubmission(webhook),
+        ).rejects.toThrow(SubmissionRejectionReason.DuplicateSubmission);
 
-    expect(submissionRepository.createUnique).not.toHaveBeenCalled();
+        expect(submissionRepository.createUnique).not.toHaveBeenCalled();
+      });
+    });
   });
 });
