@@ -24,59 +24,59 @@ class ManifestRequirementsDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  required_hashtags?: string[];
+  requiredHashtags?: string[];
 
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  required_keywords?: string[];
+  requiredKeywords?: string[];
 
   @IsOptional()
   @IsString()
-  required_link?: string;
+  requiredLink?: string;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  min_length?: number;
+  minLength?: number;
 
   @IsOptional()
   @IsBoolean()
-  requires_media?: boolean;
+  requiresMedia?: boolean;
 
   @IsOptional()
   @IsBoolean()
-  must_be_public?: boolean;
+  mustBePublic?: boolean;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  min_live_duration_hours?: number;
+  minLiveDurationHours?: number;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  min_followers?: number;
+  minFollowers?: number;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  min_account_age_days?: number;
+  minAccountAgeDays?: number;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  min_likes?: number;
+  minLikes?: number;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  min_reposts?: number;
+  minReposts?: number;
 }
 
 class ManifestAiValidationDto {
   @IsIn(['low', 'medium', 'high'])
-  allowed_abuse_probability!: AbuseProbability;
+  allowedAbuseProbability!: AbuseProbability;
 }
 
 class ManifestCampaignDto {
@@ -91,11 +91,11 @@ class ManifestCampaignDto {
 
 class ManifestDto {
   @IsEnum(JobRequestType)
-  job_type!: JobRequestType;
+  jobType!: JobRequestType;
 
   @IsNumber()
   @Min(0)
-  end_date!: number;
+  endDate!: number;
 
   @IsArray()
   @IsString({ each: true })
@@ -103,7 +103,7 @@ class ManifestDto {
 
   @IsInt()
   @Min(1)
-  submissions_required!: number;
+  submissionsRequired!: number;
 
   @ValidateNested()
   @Type(() => ManifestCampaignDto)
@@ -115,7 +115,7 @@ class ManifestDto {
 
   @ValidateNested()
   @Type(() => ManifestAiValidationDto)
-  ai_validation!: ManifestAiValidationDto;
+  aiValidation!: ManifestAiValidationDto;
 
   @IsOptional()
   @IsArray()

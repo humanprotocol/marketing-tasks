@@ -80,13 +80,13 @@ export class AssignmentService {
       jobEntity.manifestUrl,
     );
 
-    if (currentAssignments >= manifest.submissions_required) {
+    if (currentAssignments >= manifest.submissionsRequired) {
       throw new ValidationError(ErrorAssignment.FullyAssigned);
     }
 
-    const jobEndDate = new Date(manifest.end_date);
+    const jobEndDate = new Date(manifest.endDate);
     const requiredLiveDurationMs =
-      (manifest.requirements.min_live_duration_hours ?? 0) * 60 * 60 * 1000;
+      (manifest.requirements.minLiveDurationHours ?? 0) * 60 * 60 * 1000;
     if (jobEndDate.getTime() - Date.now() < requiredLiveDurationMs) {
       throw new ValidationError(
         ErrorAssignment.InsufficientTimeForLiveDuration,
@@ -112,7 +112,7 @@ export class AssignmentService {
     const rewardAmount = await this.jobService.getRewardAmount(
       data.chainId,
       data.escrowAddress,
-      manifest.submissions_required,
+      manifest.submissionsRequired,
     );
 
     // Allow reassignation when status is Canceled

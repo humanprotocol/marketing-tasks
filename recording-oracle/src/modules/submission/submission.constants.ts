@@ -15,61 +15,61 @@ export const SUBMISSION_VALIDATION_RULES: SubmissionValidationRule[] = [
   },
   {
     isValid: (validation, manifest) =>
-      !manifest.requirements.must_be_public || validation.isPublic,
+      !manifest.requirements.mustBePublic || validation.isPublic,
     rejectionReason: SubmissionRejectionReason.PostNotPublic,
   },
   {
     isValid: (validation, manifest) =>
-      !manifest.requirements.required_hashtags?.length ||
+      !manifest.requirements.requiredHashtags?.length ||
       validation.hasRequiredHashtags,
     rejectionReason: SubmissionRejectionReason.MissingRequiredHashtag,
   },
   {
     isValid: (validation, manifest) =>
-      !manifest.requirements.required_keywords?.length ||
+      !manifest.requirements.requiredKeywords?.length ||
       validation.hasRequiredKeywords,
     rejectionReason: SubmissionRejectionReason.MissingRequiredKeyword,
   },
   {
     isValid: (validation, manifest) =>
-      !manifest.requirements.required_link || validation.hasRequiredLink,
+      !manifest.requirements.requiredLink || validation.hasRequiredLink,
     rejectionReason: SubmissionRejectionReason.MissingRequiredLink,
   },
   {
     isValid: (validation, manifest) =>
-      !manifest.requirements.min_length || validation.meetsMinLength,
+      !manifest.requirements.minLength || validation.meetsMinLength,
     rejectionReason: SubmissionRejectionReason.MinLengthNotMet,
   },
   {
     isValid: (validation, manifest) =>
-      !manifest.requirements.requires_media || validation.hasRequiredMedia,
+      !manifest.requirements.requiresMedia || validation.hasRequiredMedia,
     rejectionReason: SubmissionRejectionReason.RequiredMediaMissing,
   },
   {
     isValid: (validation, manifest) =>
-      !manifest.requirements.min_followers || validation.meetsMinFollowers,
+      !manifest.requirements.minFollowers || validation.meetsMinFollowers,
     rejectionReason: SubmissionRejectionReason.MinFollowersNotMet,
   },
   {
     isValid: (validation, manifest) =>
-      !manifest.requirements.min_account_age_days ||
+      !manifest.requirements.minAccountAgeDays ||
       validation.meetsMinAccountAgeDays,
     rejectionReason: SubmissionRejectionReason.MinAccountAgeNotMet,
   },
   {
     isValid: (validation, manifest) =>
-      !manifest.requirements.min_live_duration_hours ||
+      !manifest.requirements.minLiveDurationHours ||
       validation.meetsMinLiveDurationHours,
     rejectionReason: SubmissionRejectionReason.MinLiveDurationNotMet,
   },
   {
     isValid: (validation, manifest) =>
-      !manifest.requirements.min_likes || validation.meetsMinLikes,
+      !manifest.requirements.minLikes || validation.meetsMinLikes,
     rejectionReason: SubmissionRejectionReason.MinLikesNotMet,
   },
   {
     isValid: (validation, manifest) =>
-      !manifest.requirements.min_reposts || validation.meetsMinReposts,
+      !manifest.requirements.minReposts || validation.meetsMinReposts,
     rejectionReason: SubmissionRejectionReason.MinRepostsNotMet,
   },
 ];
