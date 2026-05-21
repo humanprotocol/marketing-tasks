@@ -32,55 +32,59 @@ describe('JobController', () => {
   });
 
   describe('getJobs', () => {
-    it('should call jobService.getJobList', async () => {
-      const getJobsDto: GetJobsDto = {
-        sortField: JobSortField.CREATED_AT,
-        chainId: 1,
-        jobType: JobType.SOCIAL_MEDIA_PROMOTION,
-        fields: [],
-        escrowAddress: '0x1234567890123456789012345678901234567890',
-        status: JobStatus.ACTIVE,
-        page: 1,
-        pageSize: 10,
-        skip: 0,
-      };
+    describe('succeed', () => {
+      it('should call jobService.getJobList', async () => {
+        const getJobsDto: GetJobsDto = {
+          sortField: JobSortField.CREATED_AT,
+          chainId: 1,
+          jobType: JobType.SOCIAL_MEDIA_PROMOTION,
+          fields: [],
+          escrowAddress: '0x1234567890123456789012345678901234567890',
+          status: JobStatus.ACTIVE,
+          page: 1,
+          pageSize: 10,
+          skip: 0,
+        };
 
-      const req = {
-        user: { reputationNetwork: 'network' },
-      } as RequestWithUser;
+        const req = {
+          user: { reputationNetwork: 'network' },
+        } as RequestWithUser;
 
-      const pageDto: PageDto<JobDto> = {
-        results: [],
-        totalResults: 0,
-        totalPages: 0,
-        pageSize: 10,
-        page: 1,
-      };
+        const pageDto: PageDto<JobDto> = {
+          results: [],
+          totalResults: 0,
+          totalPages: 0,
+          pageSize: 10,
+          page: 1,
+        };
 
-      jest.spyOn(jobService, 'getJobList').mockResolvedValue(pageDto);
+        jest.spyOn(jobService, 'getJobList').mockResolvedValue(pageDto);
 
-      await jobController.getJobs(getJobsDto, req);
+        await jobController.getJobs(getJobsDto, req);
 
-      expect(jobService.getJobList).toHaveBeenCalledWith(
-        getJobsDto,
-        req.user.reputationNetwork,
-      );
+        expect(jobService.getJobList).toHaveBeenCalledWith(
+          getJobsDto,
+          req.user.reputationNetwork,
+        );
+      });
     });
   });
 
   describe('solveJob', () => {
-    it('should call jobService.solveJob', async () => {
-      const solveJobDto: SolveJobDto = {
-        assignmentId: '1',
-        postUrl: 'https://x.com/test/status/123',
-      };
+    describe('succeed', () => {
+      it('should call jobService.solveJob', async () => {
+        const solveJobDto: SolveJobDto = {
+          assignmentId: '1',
+          postUrl: 'https://x.com/test/status/123',
+        };
 
-      await jobController.solveJob(solveJobDto);
+        await jobController.solveJob(solveJobDto);
 
-      expect(jobService.solveJob).toHaveBeenCalledWith(
-        Number(solveJobDto.assignmentId),
-        solveJobDto.postUrl,
-      );
+        expect(jobService.solveJob).toHaveBeenCalledWith(
+          Number(solveJobDto.assignmentId),
+          solveJobDto.postUrl,
+        );
+      });
     });
   });
 });

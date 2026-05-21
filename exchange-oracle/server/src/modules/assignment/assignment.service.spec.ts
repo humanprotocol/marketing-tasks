@@ -112,274 +112,289 @@ describe('AssignmentService', () => {
       escrowAddress,
     };
 
-    it('should create a new assignment in the database', async () => {
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue({
-          id: 1,
-          manifestUrl: MOCK_MANIFEST_URL,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.ACTIVE,
-        } as any);
-      jest
-        .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
-        .mockResolvedValue(null);
-      jest.spyOn(assignmentRepository, 'countByJobId').mockResolvedValue(0);
-      jest.spyOn(jobService, 'getManifest').mockResolvedValue(manifest);
-      jest.spyOn(jobService, 'getRewardAmount').mockResolvedValue(20);
-      (Escrow__factory.connect as any).mockImplementation(() => ({
-        duration: jest
-          .fn()
-          .mockResolvedValue((new Date().getTime() + 1000) / 1000),
-      }));
+    describe('succeed', () => {
+      it('should create a new assignment in the database', async () => {
+        jest
+          .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
+          .mockResolvedValue({
+            id: 1,
+            manifestUrl: MOCK_MANIFEST_URL,
+            reputationNetwork: reputationNetwork,
+            status: JobStatus.ACTIVE,
+          } as any);
+        jest
+          .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
+          .mockResolvedValue(null);
+        jest.spyOn(assignmentRepository, 'countByJobId').mockResolvedValue(0);
+        jest.spyOn(jobService, 'getManifest').mockResolvedValue(manifest);
+        jest.spyOn(jobService, 'getRewardAmount').mockResolvedValue(20);
+        (Escrow__factory.connect as any).mockImplementation(() => ({
+          duration: jest
+            .fn()
+            .mockResolvedValue((new Date().getTime() + 1000) / 1000),
+        }));
 
-      const result = await assignmentService.createAssignment(
-        createAssignmentDto,
-        { address: workerAddress, reputationNetwork: reputationNetwork } as any,
-      );
+        const result = await assignmentService.createAssignment(
+          createAssignmentDto,
+          {
+            address: workerAddress,
+            reputationNetwork: reputationNetwork,
+          } as any,
+        );
 
-      expect(result).toEqual(undefined);
-      expect(assignmentRepository.createUnique).toHaveBeenCalledWith({
-        job: {
-          id: 1,
-          manifestUrl: MOCK_MANIFEST_URL,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.ACTIVE,
-        },
-        workerAddress: workerAddress,
-        status: AssignmentStatus.ACTIVE,
-        expiresAt: expect.any(Date),
-        rewardAmount: 20,
-      });
-      expect(jobService.getManifest).toHaveBeenCalledWith(
-        chainId,
-        escrowAddress,
-        MOCK_MANIFEST_URL,
-      );
-      expect(jobService.getRewardAmount).toHaveBeenCalledWith(
-        chainId,
-        escrowAddress,
-        manifest.submissions_required,
-      );
-    });
-
-    it('should reassign user who has previously canceled', async () => {
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue({
-          id: 1,
-          manifestUrl: MOCK_MANIFEST_URL,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.ACTIVE,
-        } as any);
-      jest
-        .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
-        .mockResolvedValue({ id: 1, status: AssignmentStatus.CANCELED } as any);
-
-      const result = await assignmentService.createAssignment(
-        createAssignmentDto,
-        {
-          address: workerAddress,
-          reputationNetwork: reputationNetwork,
-        } as any,
-      );
-
-      expect(result).toEqual(undefined);
-      expect(assignmentRepository.updateOne).toHaveBeenCalledWith({
-        id: 1,
-        status: AssignmentStatus.ACTIVE,
-      });
-      expect(jobService.getManifest).toHaveBeenCalledWith(
-        chainId,
-        escrowAddress,
-        MOCK_MANIFEST_URL,
-      );
-    });
-
-    it('should fail if escrow address is invalid', async () => {
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue(null);
-
-      await expect(
-        assignmentService.createAssignment(createAssignmentDto, {
-          address: workerAddress,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.ACTIVE,
-        } as any),
-      ).rejects.toThrow('Job not found');
-    });
-
-    it('should fail if job is not in the same reputation network', async () => {
-      const differentReputationNetwork =
-        '0x1234567890123456789012345678901234567893';
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue({
-          id: 1,
-          manifestUrl: MOCK_MANIFEST_URL,
-          reputationNetwork: differentReputationNetwork,
-          status: JobStatus.ACTIVE,
-        } as any);
-
-      await expect(
-        assignmentService.createAssignment(createAssignmentDto, {
-          address: workerAddress,
-          reputationNetwork: reputationNetwork,
-        } as any),
-      ).rejects.toThrow('Requested job is not in your reputation network');
-    });
-
-    it('should fail if job is not active', async () => {
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue({
-          id: 1,
-          manifestUrl: MOCK_MANIFEST_URL,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.CANCELED,
-        } as any);
-
-      await expect(
-        assignmentService.createAssignment(createAssignmentDto, {
-          address: workerAddress,
-          reputationNetwork: reputationNetwork,
-        } as any),
-      ).rejects.toThrow(ErrorJob.InvalidStatus);
-    });
-
-    it('should fail if user already assigned', async () => {
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue({
-          id: 1,
-          manifestUrl: MOCK_MANIFEST_URL,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.ACTIVE,
-        } as any);
-      jest
-        .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
-        .mockResolvedValue({ id: 1, status: AssignmentStatus.REJECTED } as any);
-
-      await expect(
-        assignmentService.createAssignment(createAssignmentDto, {
-          address: workerAddress,
-          reputationNetwork: reputationNetwork,
-        } as any),
-      ).rejects.toThrow('Assignment already exists');
-    });
-
-    it('should fail if job is fully assigned', async () => {
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue({
-          id: 1,
-          manifestUrl: MOCK_MANIFEST_URL,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.ACTIVE,
-        } as any);
-      jest
-        .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
-        .mockResolvedValue(null);
-      jest.spyOn(assignmentRepository, 'countByJobId').mockResolvedValue(5);
-      jest.spyOn(jobService, 'getManifest').mockResolvedValue(manifest);
-
-      await expect(
-        assignmentService.createAssignment(createAssignmentDto, {
-          address: workerAddress,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.ACTIVE,
-        } as any),
-      ).rejects.toThrow('Fully assigned job');
-    });
-
-    it('should fail if there is not enough time left for min live duration', async () => {
-      const expiringManifest: ManifestDto = createManifest({
-        end_date: new Date(Date.now() + 30 * 60 * 1000).getTime(),
-        requirements: {
-          ...manifest.requirements,
-          min_live_duration_hours: 2,
-        },
+        expect(result).toEqual(undefined);
+        expect(assignmentRepository.createUnique).toHaveBeenCalledWith({
+          job: {
+            id: 1,
+            manifestUrl: MOCK_MANIFEST_URL,
+            reputationNetwork: reputationNetwork,
+            status: JobStatus.ACTIVE,
+          },
+          workerAddress: workerAddress,
+          status: AssignmentStatus.ACTIVE,
+          expiresAt: expect.any(Date),
+          rewardAmount: 20,
+        });
+        expect(jobService.getManifest).toHaveBeenCalledWith(
+          chainId,
+          escrowAddress,
+          MOCK_MANIFEST_URL,
+        );
+        expect(jobService.getRewardAmount).toHaveBeenCalledWith(
+          chainId,
+          escrowAddress,
+          manifest.submissions_required,
+        );
       });
 
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue({
-          id: 1,
-          manifestUrl: MOCK_MANIFEST_URL,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.ACTIVE,
-        } as any);
-      jest
-        .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
-        .mockResolvedValue(null);
-      jest.spyOn(assignmentRepository, 'countByJobId').mockResolvedValue(0);
-      jest.spyOn(jobService, 'getManifest').mockResolvedValue(expiringManifest);
+      it('should reassign user who has previously canceled', async () => {
+        jest
+          .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
+          .mockResolvedValue({
+            id: 1,
+            manifestUrl: MOCK_MANIFEST_URL,
+            reputationNetwork: reputationNetwork,
+            status: JobStatus.ACTIVE,
+          } as any);
+        jest
+          .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
+          .mockResolvedValue({
+            id: 1,
+            status: AssignmentStatus.CANCELED,
+          } as any);
 
-      await expect(
-        assignmentService.createAssignment(createAssignmentDto, {
-          address: workerAddress,
-          reputationNetwork: reputationNetwork,
-        } as any),
-      ).rejects.toThrow(ErrorAssignment.InsufficientTimeForLiveDuration);
+        const result = await assignmentService.createAssignment(
+          createAssignmentDto,
+          {
+            address: workerAddress,
+            reputationNetwork: reputationNetwork,
+          } as any,
+        );
+
+        expect(result).toEqual(undefined);
+        expect(assignmentRepository.updateOne).toHaveBeenCalledWith({
+          id: 1,
+          status: AssignmentStatus.ACTIVE,
+        });
+        expect(jobService.getManifest).toHaveBeenCalledWith(
+          chainId,
+          escrowAddress,
+          MOCK_MANIFEST_URL,
+        );
+      });
     });
 
-    it('should fail if job qualifications does not match with user qualifications', async () => {
-      const qualifiedManifest: ManifestDto = {
-        ...manifest,
-        qualifications: ['test'],
-      };
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue({
-          id: 1,
-          manifestUrl: MOCK_MANIFEST_URL,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.ACTIVE,
-        } as any);
-      jest
-        .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
-        .mockResolvedValue(null);
-      jest.spyOn(assignmentRepository, 'countByJobId').mockResolvedValue(0);
-      jest
-        .spyOn(jobService, 'getManifest')
-        .mockResolvedValue(qualifiedManifest);
+    describe('fail', () => {
+      it('should fail if escrow address is invalid', async () => {
+        jest
+          .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
+          .mockResolvedValue(null);
 
-      await expect(
-        assignmentService.createAssignment(createAssignmentDto, {
-          address: workerAddress,
-          reputationNetwork: reputationNetwork,
-          qualifications: ['test2'],
-        } as any),
-      ).rejects.toThrow(ErrorAssignment.InvalidAssignmentQualification);
-    });
+        await expect(
+          assignmentService.createAssignment(createAssignmentDto, {
+            address: workerAddress,
+            reputationNetwork: reputationNetwork,
+            status: JobStatus.ACTIVE,
+          } as any),
+        ).rejects.toThrow('Job not found');
+      });
 
-    it('should fail if job is expired', async () => {
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue({
-          id: 1,
-          manifestUrl: MOCK_MANIFEST_URL,
-          reputationNetwork: reputationNetwork,
-          status: JobStatus.ACTIVE,
-        } as any);
-      jest
-        .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
-        .mockResolvedValue(null);
-      jest.spyOn(assignmentRepository, 'countByJobId').mockResolvedValue(0);
-      jest.spyOn(jobService, 'getManifest').mockResolvedValue(manifest);
-      (Escrow__factory.connect as any).mockImplementation(() => ({
-        duration: jest
-          .fn()
-          .mockResolvedValue((new Date().getTime() - 1000) / 1000),
-      }));
+      it('should fail if job is not in the same reputation network', async () => {
+        const differentReputationNetwork =
+          '0x1234567890123456789012345678901234567893';
+        jest
+          .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
+          .mockResolvedValue({
+            id: 1,
+            manifestUrl: MOCK_MANIFEST_URL,
+            reputationNetwork: differentReputationNetwork,
+            status: JobStatus.ACTIVE,
+          } as any);
 
-      await expect(
-        assignmentService.createAssignment(createAssignmentDto, {
-          address: workerAddress,
-          reputationNetwork: reputationNetwork,
-        } as any),
-      ).rejects.toThrow('Expired escrow');
+        await expect(
+          assignmentService.createAssignment(createAssignmentDto, {
+            address: workerAddress,
+            reputationNetwork: reputationNetwork,
+          } as any),
+        ).rejects.toThrow('Requested job is not in your reputation network');
+      });
+
+      it('should fail if job is not active', async () => {
+        jest
+          .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
+          .mockResolvedValue({
+            id: 1,
+            manifestUrl: MOCK_MANIFEST_URL,
+            reputationNetwork: reputationNetwork,
+            status: JobStatus.CANCELED,
+          } as any);
+
+        await expect(
+          assignmentService.createAssignment(createAssignmentDto, {
+            address: workerAddress,
+            reputationNetwork: reputationNetwork,
+          } as any),
+        ).rejects.toThrow(ErrorJob.InvalidStatus);
+      });
+
+      it('should fail if user already assigned', async () => {
+        jest
+          .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
+          .mockResolvedValue({
+            id: 1,
+            manifestUrl: MOCK_MANIFEST_URL,
+            reputationNetwork: reputationNetwork,
+            status: JobStatus.ACTIVE,
+          } as any);
+        jest
+          .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
+          .mockResolvedValue({
+            id: 1,
+            status: AssignmentStatus.REJECTED,
+          } as any);
+
+        await expect(
+          assignmentService.createAssignment(createAssignmentDto, {
+            address: workerAddress,
+            reputationNetwork: reputationNetwork,
+          } as any),
+        ).rejects.toThrow('Assignment already exists');
+      });
+
+      it('should fail if job is fully assigned', async () => {
+        jest
+          .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
+          .mockResolvedValue({
+            id: 1,
+            manifestUrl: MOCK_MANIFEST_URL,
+            reputationNetwork: reputationNetwork,
+            status: JobStatus.ACTIVE,
+          } as any);
+        jest
+          .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
+          .mockResolvedValue(null);
+        jest.spyOn(assignmentRepository, 'countByJobId').mockResolvedValue(5);
+        jest.spyOn(jobService, 'getManifest').mockResolvedValue(manifest);
+
+        await expect(
+          assignmentService.createAssignment(createAssignmentDto, {
+            address: workerAddress,
+            reputationNetwork: reputationNetwork,
+            status: JobStatus.ACTIVE,
+          } as any),
+        ).rejects.toThrow('Fully assigned job');
+      });
+
+      it('should fail if there is not enough time left for min live duration', async () => {
+        const expiringManifest: ManifestDto = createManifest({
+          end_date: new Date(Date.now() + 30 * 60 * 1000).getTime(),
+          requirements: {
+            ...manifest.requirements,
+            min_live_duration_hours: 2,
+          },
+        });
+
+        jest
+          .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
+          .mockResolvedValue({
+            id: 1,
+            manifestUrl: MOCK_MANIFEST_URL,
+            reputationNetwork: reputationNetwork,
+            status: JobStatus.ACTIVE,
+          } as any);
+        jest
+          .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
+          .mockResolvedValue(null);
+        jest.spyOn(assignmentRepository, 'countByJobId').mockResolvedValue(0);
+        jest
+          .spyOn(jobService, 'getManifest')
+          .mockResolvedValue(expiringManifest);
+
+        await expect(
+          assignmentService.createAssignment(createAssignmentDto, {
+            address: workerAddress,
+            reputationNetwork: reputationNetwork,
+          } as any),
+        ).rejects.toThrow(ErrorAssignment.InsufficientTimeForLiveDuration);
+      });
+
+      it('should fail if job qualifications does not match with user qualifications', async () => {
+        const qualifiedManifest: ManifestDto = {
+          ...manifest,
+          qualifications: ['test'],
+        };
+        jest
+          .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
+          .mockResolvedValue({
+            id: 1,
+            manifestUrl: MOCK_MANIFEST_URL,
+            reputationNetwork: reputationNetwork,
+            status: JobStatus.ACTIVE,
+          } as any);
+        jest
+          .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
+          .mockResolvedValue(null);
+        jest.spyOn(assignmentRepository, 'countByJobId').mockResolvedValue(0);
+        jest
+          .spyOn(jobService, 'getManifest')
+          .mockResolvedValue(qualifiedManifest);
+
+        await expect(
+          assignmentService.createAssignment(createAssignmentDto, {
+            address: workerAddress,
+            reputationNetwork: reputationNetwork,
+            qualifications: ['test2'],
+          } as any),
+        ).rejects.toThrow(ErrorAssignment.InvalidAssignmentQualification);
+      });
+
+      it('should fail if job is expired', async () => {
+        jest
+          .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
+          .mockResolvedValue({
+            id: 1,
+            manifestUrl: MOCK_MANIFEST_URL,
+            reputationNetwork: reputationNetwork,
+            status: JobStatus.ACTIVE,
+          } as any);
+        jest
+          .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
+          .mockResolvedValue(null);
+        jest.spyOn(assignmentRepository, 'countByJobId').mockResolvedValue(0);
+        jest.spyOn(jobService, 'getManifest').mockResolvedValue(manifest);
+        (Escrow__factory.connect as any).mockImplementation(() => ({
+          duration: jest
+            .fn()
+            .mockResolvedValue((new Date().getTime() - 1000) / 1000),
+        }));
+
+        await expect(
+          assignmentService.createAssignment(createAssignmentDto, {
+            address: workerAddress,
+            reputationNetwork: reputationNetwork,
+          } as any),
+        ).rejects.toThrow('Expired escrow');
+      });
     });
   });
 
@@ -405,176 +420,188 @@ describe('AssignmentService', () => {
       jest.restoreAllMocks();
     });
 
-    it('should return an array of assignments', async () => {
-      const manifest: ManifestDto = createManifest();
+    describe('succeed', () => {
+      it('should return an array of assignments', async () => {
+        const manifest: ManifestDto = createManifest();
 
-      jest.spyOn(jobService, 'getManifest').mockResolvedValue(manifest);
-      jest
-        .spyOn(assignmentRepository, 'fetchFiltered')
-        .mockResolvedValueOnce({ entities: assignments as any, itemCount: 1 });
+        jest.spyOn(jobService, 'getManifest').mockResolvedValue(manifest);
+        jest
+          .spyOn(assignmentRepository, 'fetchFiltered')
+          .mockResolvedValueOnce({
+            entities: assignments as any,
+            itemCount: 1,
+          });
 
-      const result = await assignmentService.getAssignmentList(
-        {
-          chainId,
+        const result = await assignmentService.getAssignmentList(
+          {
+            chainId,
+            jobType: JobType.SOCIAL_MEDIA_PROMOTION,
+            escrowAddress,
+            status: AssignmentStatus.ACTIVE,
+            page: 0,
+            pageSize: 10,
+            skip: 0,
+            sortField: AssignmentSortField.CREATED_AT,
+            sort: SortDirection.ASC,
+          },
+          workerAddress,
+          reputationNetwork,
+        );
+
+        expect(result.totalResults).toEqual(1);
+        expect(result.results[0]).toEqual({
+          assignmentId: '1',
+          chainId: 1,
+          escrowAddress: escrowAddress,
           jobType: JobType.SOCIAL_MEDIA_PROMOTION,
-          escrowAddress,
           status: AssignmentStatus.ACTIVE,
+          rewardToken: 'HMT',
+          rewardAmount: 20,
+          url: expect.any(String),
+          createdAt: expect.any(String),
+          expiresAt: expect.any(String),
+          updatedAt: expect.any(String),
+        } as AssignmentDto);
+        expect(jobService.getManifest).toHaveBeenCalledWith(
+          chainId,
+          escrowAddress,
+          MOCK_MANIFEST_URL,
+        );
+        expect(assignmentRepository.fetchFiltered).toHaveBeenCalledWith({
           page: 0,
           pageSize: 10,
           skip: 0,
-          sortField: AssignmentSortField.CREATED_AT,
           sort: SortDirection.ASC,
-        },
-        workerAddress,
-        reputationNetwork,
-      );
-
-      expect(result.totalResults).toEqual(1);
-      expect(result.results[0]).toEqual({
-        assignmentId: '1',
-        chainId: 1,
-        escrowAddress: escrowAddress,
-        jobType: JobType.SOCIAL_MEDIA_PROMOTION,
-        status: AssignmentStatus.ACTIVE,
-        rewardToken: 'HMT',
-        rewardAmount: 20,
-        url: expect.any(String),
-        createdAt: expect.any(String),
-        expiresAt: expect.any(String),
-        updatedAt: expect.any(String),
-      } as AssignmentDto);
-      expect(jobService.getManifest).toHaveBeenCalledWith(
-        chainId,
-        escrowAddress,
-        MOCK_MANIFEST_URL,
-      );
-      expect(assignmentRepository.fetchFiltered).toHaveBeenCalledWith({
-        page: 0,
-        pageSize: 10,
-        skip: 0,
-        sort: SortDirection.ASC,
-        sortField: AssignmentSortField.CREATED_AT,
-        chainId,
-        jobType: JobType.SOCIAL_MEDIA_PROMOTION,
-        escrowAddress,
-        status: AssignmentStatus.ACTIVE,
-        reputationNetwork,
-        workerAddress,
+          sortField: AssignmentSortField.CREATED_AT,
+          chainId,
+          jobType: JobType.SOCIAL_MEDIA_PROMOTION,
+          escrowAddress,
+          status: AssignmentStatus.ACTIVE,
+          reputationNetwork,
+          workerAddress,
+        });
       });
-    });
 
-    it('should return an empty array if no assignments are found', async () => {
-      jest
-        .spyOn(assignmentRepository, 'fetchFiltered')
-        .mockResolvedValueOnce({ entities: [], itemCount: 0 });
+      it('should return an empty array if no assignments are found', async () => {
+        jest
+          .spyOn(assignmentRepository, 'fetchFiltered')
+          .mockResolvedValueOnce({ entities: [], itemCount: 0 });
 
-      const result = await assignmentService.getAssignmentList(
-        {
-          chainId,
-          jobType: JobType.SOCIAL_MEDIA_PROMOTION,
-          escrowAddress,
-          status: AssignmentStatus.ACTIVE,
+        const result = await assignmentService.getAssignmentList(
+          {
+            chainId,
+            jobType: JobType.SOCIAL_MEDIA_PROMOTION,
+            escrowAddress,
+            status: AssignmentStatus.ACTIVE,
+            page: 1,
+            pageSize: 10,
+            skip: 0,
+            sortField: AssignmentSortField.CREATED_AT,
+            sort: SortDirection.ASC,
+          },
+          workerAddress,
+          reputationNetwork,
+        );
+
+        expect(result.totalResults).toEqual(0);
+        expect(result.results).toEqual([]);
+      });
+
+      it('should handle different sort orders correctly', async () => {
+        jest
+          .spyOn(assignmentRepository, 'fetchFiltered')
+          .mockResolvedValueOnce({
+            entities: assignments as any,
+            itemCount: 1,
+          });
+
+        await assignmentService.getAssignmentList(
+          {
+            chainId,
+            jobType: JobType.SOCIAL_MEDIA_PROMOTION,
+            escrowAddress,
+            status: AssignmentStatus.ACTIVE,
+            page: 1,
+            pageSize: 10,
+            skip: 0,
+            sortField: AssignmentSortField.CREATED_AT,
+            sort: SortDirection.DESC,
+          },
+          workerAddress,
+          reputationNetwork,
+        );
+
+        expect(assignmentRepository.fetchFiltered).toHaveBeenCalledWith({
           page: 1,
           pageSize: 10,
           skip: 0,
-          sortField: AssignmentSortField.CREATED_AT,
-          sort: SortDirection.ASC,
-        },
-        workerAddress,
-        reputationNetwork,
-      );
-
-      expect(result.totalResults).toEqual(0);
-      expect(result.results).toEqual([]);
-    });
-
-    it('should handle different sort orders correctly', async () => {
-      jest
-        .spyOn(assignmentRepository, 'fetchFiltered')
-        .mockResolvedValueOnce({ entities: assignments as any, itemCount: 1 });
-
-      await assignmentService.getAssignmentList(
-        {
-          chainId,
-          jobType: JobType.SOCIAL_MEDIA_PROMOTION,
-          escrowAddress,
-          status: AssignmentStatus.ACTIVE,
-          page: 1,
-          pageSize: 10,
-          skip: 0,
-          sortField: AssignmentSortField.CREATED_AT,
           sort: SortDirection.DESC,
-        },
-        workerAddress,
-        reputationNetwork,
-      );
-
-      expect(assignmentRepository.fetchFiltered).toHaveBeenCalledWith({
-        page: 1,
-        pageSize: 10,
-        skip: 0,
-        sort: SortDirection.DESC,
-        sortField: AssignmentSortField.CREATED_AT,
-        chainId,
-        jobType: JobType.SOCIAL_MEDIA_PROMOTION,
-        escrowAddress,
-        status: AssignmentStatus.ACTIVE,
-        reputationNetwork,
-        workerAddress,
+          sortField: AssignmentSortField.CREATED_AT,
+          chainId,
+          jobType: JobType.SOCIAL_MEDIA_PROMOTION,
+          escrowAddress,
+          status: AssignmentStatus.ACTIVE,
+          reputationNetwork,
+          workerAddress,
+        });
       });
     });
   });
 
   describe('resignJob', () => {
-    it('should successfully cancel an active assignment', async () => {
-      const assignmentId = 1;
-      const workerAddress = MOCK_ADDRESS;
-      const mockAssignment = {
-        id: assignmentId,
-        workerAddress,
-        status: AssignmentStatus.ACTIVE,
-      } as AssignmentEntity;
+    describe('succeed', () => {
+      it('should successfully cancel an active assignment', async () => {
+        const assignmentId = 1;
+        const workerAddress = MOCK_ADDRESS;
+        const mockAssignment = {
+          id: assignmentId,
+          workerAddress,
+          status: AssignmentStatus.ACTIVE,
+        } as AssignmentEntity;
 
-      jest
-        .spyOn(assignmentRepository, 'findOneById')
-        .mockResolvedValue(mockAssignment);
+        jest
+          .spyOn(assignmentRepository, 'findOneById')
+          .mockResolvedValue(mockAssignment);
 
-      await expect(
-        assignmentService.resign(assignmentId, workerAddress),
-      ).resolves.toBeUndefined();
-      expect(mockAssignment.status).toBe(AssignmentStatus.CANCELED);
-      expect(assignmentRepository.updateOne).toHaveBeenCalledWith(
-        mockAssignment,
-      );
+        await expect(
+          assignmentService.resign(assignmentId, workerAddress),
+        ).resolves.toBeUndefined();
+        expect(mockAssignment.status).toBe(AssignmentStatus.CANCELED);
+        expect(assignmentRepository.updateOne).toHaveBeenCalledWith(
+          mockAssignment,
+        );
+      });
     });
 
-    it('should throw NotFound if assignment does not exist', async () => {
-      const assignmentId = 1;
-      const workerAddress = MOCK_ADDRESS;
+    describe('fail', () => {
+      it('should throw NotFound if assignment does not exist', async () => {
+        const assignmentId = 1;
+        const workerAddress = MOCK_ADDRESS;
 
-      jest.spyOn(assignmentRepository, 'findOneById').mockResolvedValue(null);
+        jest.spyOn(assignmentRepository, 'findOneById').mockResolvedValue(null);
 
-      await expect(
-        assignmentService.resign(assignmentId, workerAddress),
-      ).rejects.toThrow(new ServerError(ErrorAssignment.NotFound));
-    });
+        await expect(
+          assignmentService.resign(assignmentId, workerAddress),
+        ).rejects.toThrow(new ServerError(ErrorAssignment.NotFound));
+      });
 
-    it('should throw InvalidStatus if assignment status is not ACTIVE', async () => {
-      const assignmentId = 1;
-      const workerAddress = MOCK_ADDRESS;
-      const mockAssignment = {
-        id: assignmentId,
-        workerAddress,
-        status: AssignmentStatus.COMPLETED,
-      } as AssignmentEntity;
+      it('should throw InvalidStatus if assignment status is not ACTIVE', async () => {
+        const assignmentId = 1;
+        const workerAddress = MOCK_ADDRESS;
+        const mockAssignment = {
+          id: assignmentId,
+          workerAddress,
+          status: AssignmentStatus.COMPLETED,
+        } as AssignmentEntity;
 
-      jest
-        .spyOn(assignmentRepository, 'findOneById')
-        .mockResolvedValue(mockAssignment);
+        jest
+          .spyOn(assignmentRepository, 'findOneById')
+          .mockResolvedValue(mockAssignment);
 
-      await expect(
-        assignmentService.resign(assignmentId, workerAddress),
-      ).rejects.toThrow(new ConflictError(ErrorAssignment.InvalidStatus));
+        await expect(
+          assignmentService.resign(assignmentId, workerAddress),
+        ).rejects.toThrow(new ConflictError(ErrorAssignment.InvalidStatus));
+      });
     });
   });
 });
