@@ -76,22 +76,22 @@ export function normalizeValidationResult(
   return {
     ...validation,
     hasRequiredHashtags:
-      !requirements.required_hashtags?.length || validation.hasRequiredHashtags,
+      !requirements.requiredHashtags?.length || validation.hasRequiredHashtags,
     hasRequiredKeywords:
-      !requirements.required_keywords?.length || validation.hasRequiredKeywords,
-    hasRequiredLink: !requirements.required_link || validation.hasRequiredLink,
-    meetsMinLength: !requirements.min_length || validation.meetsMinLength,
+      !requirements.requiredKeywords?.length || validation.hasRequiredKeywords,
+    hasRequiredLink: !requirements.requiredLink || validation.hasRequiredLink,
+    meetsMinLength: !requirements.minLength || validation.meetsMinLength,
     hasRequiredMedia:
-      !requirements.requires_media || validation.hasRequiredMedia,
+      !requirements.requiresMedia || validation.hasRequiredMedia,
     meetsMinFollowers:
-      !requirements.min_followers || validation.meetsMinFollowers,
+      !requirements.minFollowers || validation.meetsMinFollowers,
     meetsMinAccountAgeDays:
-      !requirements.min_account_age_days || validation.meetsMinAccountAgeDays,
+      !requirements.minAccountAgeDays || validation.meetsMinAccountAgeDays,
     meetsMinLiveDurationHours:
-      !requirements.min_live_duration_hours ||
+      !requirements.minLiveDurationHours ||
       validation.meetsMinLiveDurationHours,
-    meetsMinLikes: !requirements.min_likes || validation.meetsMinLikes,
-    meetsMinReposts: !requirements.min_reposts || validation.meetsMinReposts,
+    meetsMinLikes: !requirements.minLikes || validation.meetsMinLikes,
+    meetsMinReposts: !requirements.minReposts || validation.meetsMinReposts,
   };
 }
 
@@ -100,11 +100,11 @@ export function buildGrokValidationPrompt(
   manifest: IManifest,
 ): string {
   const requirements = manifest.requirements;
-  const requiredHashtags = requirements.required_hashtags ?? [];
-  const requiredKeywords = requirements.required_keywords ?? [];
+  const requiredHashtags = requirements.requiredHashtags ?? [];
+  const requiredKeywords = requirements.requiredKeywords ?? [];
   const rules = ['- post exists'];
 
-  if (requirements.must_be_public ?? true) {
+  if (requirements.mustBePublic ?? true) {
     rules.push('- post is public');
   }
 
@@ -116,46 +116,43 @@ export function buildGrokValidationPrompt(
     rules.push(`- contains keywords: ${requiredKeywords.join(', ')}`);
   }
 
-  if (requirements.required_link) {
-    rules.push(`- contains link: ${requirements.required_link}`);
+  if (requirements.requiredLink) {
+    rules.push(`- contains link: ${requirements.requiredLink}`);
   }
 
-  if (requirements.min_length && requirements.min_length > 0) {
-    rules.push(`- text length >= ${requirements.min_length}`);
+  if (requirements.minLength && requirements.minLength > 0) {
+    rules.push(`- text length >= ${requirements.minLength}`);
   }
 
-  if (requirements.requires_media) {
+  if (requirements.requiresMedia) {
     rules.push('- includes media');
   }
 
-  if (requirements.min_followers && requirements.min_followers > 0) {
-    rules.push(`- author followers >= ${requirements.min_followers}`);
+  if (requirements.minFollowers && requirements.minFollowers > 0) {
+    rules.push(`- author followers >= ${requirements.minFollowers}`);
   }
 
-  if (
-    requirements.min_account_age_days &&
-    requirements.min_account_age_days > 0
-  ) {
+  if (requirements.minAccountAgeDays && requirements.minAccountAgeDays > 0) {
     rules.push(
-      `- author account age in days >= ${requirements.min_account_age_days}`,
+      `- author account age in days >= ${requirements.minAccountAgeDays}`,
     );
   }
 
   if (
-    requirements.min_live_duration_hours &&
-    requirements.min_live_duration_hours > 0
+    requirements.minLiveDurationHours &&
+    requirements.minLiveDurationHours > 0
   ) {
     rules.push(
-      `- post live duration in hours >= ${requirements.min_live_duration_hours}`,
+      `- post live duration in hours >= ${requirements.minLiveDurationHours}`,
     );
   }
 
-  if (requirements.min_likes && requirements.min_likes > 0) {
-    rules.push(`- post likes >= ${requirements.min_likes}`);
+  if (requirements.minLikes && requirements.minLikes > 0) {
+    rules.push(`- post likes >= ${requirements.minLikes}`);
   }
 
-  if (requirements.min_reposts && requirements.min_reposts > 0) {
-    rules.push(`- post reposts >= ${requirements.min_reposts}`);
+  if (requirements.minReposts && requirements.minReposts > 0) {
+    rules.push(`- post reposts >= ${requirements.minReposts}`);
   }
 
   return `Validate this X post for campaign compliance.

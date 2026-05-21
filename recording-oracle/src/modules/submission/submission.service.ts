@@ -185,7 +185,7 @@ export class SubmissionService {
 
     if (
       ABUSE_PRIORITY[validation.overallBotProbability] >
-      ABUSE_PRIORITY[manifest.ai_validation.allowed_abuse_probability]
+      ABUSE_PRIORITY[manifest.aiValidation.allowedAbuseProbability]
     ) {
       return SubmissionRejectionReason.AbuseProbabilityTooHigh;
     }

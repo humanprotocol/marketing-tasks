@@ -96,7 +96,7 @@ export class CronJobService {
 
           await this.jobService.storeResults(
             job,
-            manifest.submissions_required,
+            manifest.submissionsRequired,
             allResults,
           );
           await this.webhookService.createWebhook(

@@ -7,7 +7,7 @@ Current behavior:
 - consumes `submission_in_review` webhooks and stores them in Postgres for async processing
 - validates marketing submissions for job type `social_media_promotion`
 - uses Grok structured JSON output to validate X posts
-- retries submissions that still do not meet `min_live_duration_hours`
+- retries submissions that still do not meet `minLiveDurationHours`
 - stores minimal final decisions for `reputation-oracle`
 
 Final result shape:
