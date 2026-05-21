@@ -8,7 +8,7 @@ import { JobEntity } from '../job.entity';
 export const generateManifest = (
   overrides: Partial<IManifest> = {},
 ): IManifest => ({
-  jobType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
+  requestType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
   endDate: faker.date.future().getTime(),
   platforms: ['x'],
   submissionsRequired: 2,

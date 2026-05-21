@@ -1,5 +1,5 @@
 {
-  "jobType": "social_media_promotion",
+  "requestType": "social_media_promotion",
   "submissionsRequired": 1,
   "endDate": 1808326717000,
   "platforms": ["x"],
