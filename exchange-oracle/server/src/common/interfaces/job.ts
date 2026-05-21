@@ -6,30 +6,30 @@ export interface ManifestCampaign {
 }
 
 export interface ManifestRequirements {
-  required_hashtags?: string[];
-  required_keywords?: string[];
-  required_link?: string;
-  min_length?: number;
-  requires_media?: boolean;
-  must_be_public?: boolean;
-  min_live_duration_hours?: number;
-  min_followers?: number;
-  min_account_age_days?: number;
-  min_likes?: number;
-  min_reposts?: number;
+  requiredHashtags?: string[];
+  requiredKeywords?: string[];
+  requiredLink?: string;
+  minLength?: number;
+  requiresMedia?: boolean;
+  mustBePublic?: boolean;
+  minLiveDurationHours?: number;
+  minFollowers?: number;
+  minAccountAgeDays?: number;
+  minLikes?: number;
+  minReposts?: number;
 }
 
 export interface ManifestAiValidation {
-  allowed_abuse_probability: AbuseProbability;
+  allowedAbuseProbability: AbuseProbability;
 }
 
 export interface Manifest {
-  job_type: string;
+  jobType: string;
   platforms: string[];
   campaign: ManifestCampaign;
-  end_date: number;
-  submissions_required: number;
+  endDate: number;
+  submissionsRequired: number;
   requirements: ManifestRequirements;
-  ai_validation: ManifestAiValidation;
+  aiValidation: ManifestAiValidation;
   qualifications?: string[];
 }

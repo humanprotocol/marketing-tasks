@@ -183,7 +183,7 @@ export class JobService {
               await this.getRewardAmount(
                 entity.chainId,
                 entity.escrowAddress,
-                manifest.submissions_required,
+                manifest.submissionsRequired,
               )
             ).toString();
           }

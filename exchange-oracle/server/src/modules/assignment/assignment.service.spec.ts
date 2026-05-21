@@ -100,7 +100,7 @@ describe('AssignmentService', () => {
 
   describe('createAssignment', () => {
     const manifest: ManifestDto = createManifest({
-      submissions_required: 2,
+      submissionsRequired: 2,
     });
 
     beforeAll(async () => {
@@ -159,7 +159,7 @@ describe('AssignmentService', () => {
       expect(jobService.getRewardAmount).toHaveBeenCalledWith(
         chainId,
         escrowAddress,
-        manifest.submissions_required,
+        manifest.submissionsRequired,
       );
     });
 
@@ -295,10 +295,10 @@ describe('AssignmentService', () => {
 
     it('should fail if there is not enough time left for min live duration', async () => {
       const expiringManifest: ManifestDto = createManifest({
-        end_date: new Date(Date.now() + 30 * 60 * 1000).getTime(),
+        endDate: new Date(Date.now() + 30 * 60 * 1000).getTime(),
         requirements: {
           ...manifest.requirements,
-          min_live_duration_hours: 2,
+          minLiveDurationHours: 2,
         },
       });
 

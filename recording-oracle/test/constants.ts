@@ -34,29 +34,29 @@ export const MOCK_S3_SECRET_KEY = 'secret_key';
 export const MOCK_S3_BUCKET = 'solution';
 export const MOCK_S3_USE_SSL = false;
 export const MOCK_MANIFEST: IManifest = {
-  submissions_required: 2,
-  job_type: JobRequestType.SOCIAL_MEDIA_PROMOTION,
-  end_date: Date.parse('2030-01-01T00:00:00.000Z'),
+  submissionsRequired: 2,
+  jobType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
+  endDate: Date.parse('2030-01-01T00:00:00.000Z'),
   platforms: ['x'],
   campaign: {
     name: 'BrandX Launch Campaign',
     description: 'Promote BrandX on X.',
   },
   requirements: {
-    required_hashtags: ['#BrandX'],
-    required_keywords: ['BrandX'],
-    required_link: 'https://brandx.com',
-    min_length: 80,
-    requires_media: false,
-    must_be_public: true,
-    min_live_duration_hours: 72,
-    min_followers: 1000,
-    min_account_age_days: 365,
-    min_likes: 100,
-    min_reposts: 25,
+    requiredHashtags: ['#BrandX'],
+    requiredKeywords: ['BrandX'],
+    requiredLink: 'https://brandx.com',
+    minLength: 80,
+    requiresMedia: false,
+    mustBePublic: true,
+    minLiveDurationHours: 72,
+    minFollowers: 1000,
+    minAccountAgeDays: 365,
+    minLikes: 100,
+    minReposts: 25,
   },
-  ai_validation: {
-    allowed_abuse_probability: 'medium',
+  aiValidation: {
+    allowedAbuseProbability: 'medium',
   },
 };
 export const MOCK_ENCRYPTION_PRIVATE_KEY = 'private-key';

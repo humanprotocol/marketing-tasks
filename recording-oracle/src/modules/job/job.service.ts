@@ -44,16 +44,16 @@ export class JobService {
     const manifestUrl = await escrowClient.getManifest(escrowAddress);
     const manifest = await this.getManifest(manifestUrl);
 
-    if (manifest.job_type !== JobRequestType.SOCIAL_MEDIA_PROMOTION) {
+    if (manifest.jobType !== JobRequestType.SOCIAL_MEDIA_PROMOTION) {
       throw new ValidationError(ErrorJob.InvalidJobType);
     }
 
     const job = new JobEntity();
     job.chainId = chainId;
     job.escrowAddress = escrowAddress;
-    job.jobType = manifest.job_type;
+    job.jobType = manifest.jobType;
     job.manifestUrl = manifestUrl;
-    job.endDate = new Date(manifest.end_date);
+    job.endDate = new Date(manifest.endDate);
 
     return await this.jobRepository.createUnique(job);
   }
