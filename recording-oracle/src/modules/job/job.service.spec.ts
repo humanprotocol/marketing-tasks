@@ -159,7 +159,7 @@ describe('JobService', () => {
         jobRepository.findOneByChainIdAndEscrowAddress.mockResolvedValue(null);
         (EscrowClient.build as jest.Mock).mockResolvedValue(escrowClient);
         storageService.download.mockResolvedValue(
-          generateManifest({ jobType: 'unsupported' as JobRequestType }),
+          generateManifest({ requestType: 'unsupported' as JobRequestType }),
         );
 
         await expect(
@@ -221,7 +221,10 @@ describe('JobService', () => {
 
         (EscrowClient.build as jest.Mock).mockResolvedValue(escrowClient);
         (EscrowUtils.getEscrow as jest.Mock).mockResolvedValue({
-          totalFundedAmount: 100n,
+          totalFundedAmount: 99n,
+          recordingOracleFee: 1,
+          reputationOracleFee: 1,
+          exchangeOracleFee: 1,
         });
         storageService.uploadJobSolutions.mockResolvedValue(uploadedResults);
 
@@ -236,7 +239,7 @@ describe('JobService', () => {
           escrowAddress,
           uploadedResults.url,
           uploadedResults.hash,
-          50n,
+          49n,
           { timeoutMs: 10_000 },
         );
         expect(jobRepository.updateOne).toHaveBeenCalledWith(
@@ -338,7 +341,7 @@ describe('JobService', () => {
           jobService.getManifest(faker.internet.url()),
         ).resolves.toEqual(
           expect.objectContaining({
-            jobType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
+            requestType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
             submissionsRequired: manifest.submissionsRequired,
           }),
         );

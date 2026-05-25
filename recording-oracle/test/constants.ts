@@ -35,7 +35,7 @@ export const MOCK_S3_BUCKET = 'solution';
 export const MOCK_S3_USE_SSL = false;
 export const MOCK_MANIFEST: IManifest = {
   submissionsRequired: 2,
-  jobType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
+  requestType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
   endDate: Date.parse('2030-01-01T00:00:00.000Z'),
   platforms: ['x'],
   campaign: {
