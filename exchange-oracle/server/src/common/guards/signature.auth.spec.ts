@@ -50,8 +50,10 @@ describe('SignatureAuthGuard', () => {
     (EscrowUtils.getEscrow as jest.Mock).mockClear();
   });
 
-  it('should be defined', () => {
-    expect(guard).toBeDefined();
+  describe('constructor', () => {
+    it('should be defined', () => {
+      expect(guard).toBeDefined();
+    });
   });
 
   describe('canActivate', () => {
@@ -70,138 +72,142 @@ describe('SignatureAuthGuard', () => {
       } as any as ExecutionContext;
     });
 
-    it('should return true if signature is verified for JobLauncher role', async () => {
-      reflector.get = jest
-        .fn()
-        .mockReturnValue([AuthSignatureRole.JobLauncher]);
+    describe('succeed', () => {
+      it('should return true if signature is verified for JobLauncher role', async () => {
+        reflector.get = jest
+          .fn()
+          .mockReturnValue([AuthSignatureRole.JobLauncher]);
 
-      mockRequest.headers[HEADER_SIGNATURE_KEY] = 'validSignature';
-      const mockEscrowAddress = faker.finance.ethereumAddress();
-      mockRequest.body = {
-        escrow_address: mockEscrowAddress,
-        chain_id: ChainId.LOCALHOST,
-      };
-      (verifySignature as jest.Mock).mockReturnValue(true);
+        mockRequest.headers[HEADER_SIGNATURE_KEY] = 'validSignature';
+        const mockEscrowAddress = faker.finance.ethereumAddress();
+        mockRequest.body = {
+          escrow_address: mockEscrowAddress,
+          chain_id: ChainId.LOCALHOST,
+        };
+        (verifySignature as jest.Mock).mockReturnValue(true);
 
-      const result = await guard.canActivate(context);
-      expect(result).toBeTruthy();
-      expect(EscrowUtils.getEscrow).toHaveBeenCalledWith(
-        ChainId.LOCALHOST,
-        mockEscrowAddress,
-      );
+        const result = await guard.canActivate(context);
+        expect(result).toBeTruthy();
+        expect(EscrowUtils.getEscrow).toHaveBeenCalledWith(
+          ChainId.LOCALHOST,
+          mockEscrowAddress,
+        );
+      });
+
+      it('should handle Worker role and verify signature', async () => {
+        reflector.get = jest.fn().mockReturnValue([AuthSignatureRole.Worker]);
+
+        mockRequest.headers[HEADER_SIGNATURE_KEY] = 'validSignature';
+        const assignmentId = faker.number.int();
+        mockRequest.body = {
+          assignment_id: assignmentId,
+        };
+        (verifySignature as jest.Mock).mockReturnValue(true);
+        assignmentRepository.findOneById.mockResolvedValue({
+          workerAddress: '0xworkerAddress',
+        } as any);
+
+        const result = await guard.canActivate(context);
+        expect(result).toBeTruthy();
+        expect(assignmentRepository.findOneById).toHaveBeenCalledWith(
+          assignmentId,
+        );
+      });
+
+      it('should handle multiple roles and verify signature', async () => {
+        reflector.get = jest
+          .fn()
+          .mockReturnValue([
+            AuthSignatureRole.JobLauncher,
+            AuthSignatureRole.Recording,
+          ]);
+
+        mockRequest.headers[HEADER_SIGNATURE_KEY] = 'validSignature';
+        const mockEscrowAddress = faker.finance.ethereumAddress();
+        mockRequest.body = {
+          escrow_address: mockEscrowAddress,
+          chain_id: ChainId.LOCALHOST,
+          assignment_id: '1',
+        };
+        (verifySignature as jest.Mock).mockReturnValue(true);
+
+        const result = await guard.canActivate(context);
+        expect(result).toBeTruthy();
+        expect(EscrowUtils.getEscrow).toHaveBeenCalledWith(
+          ChainId.LOCALHOST,
+          mockEscrowAddress,
+        );
+        expect(verifySignature).toHaveBeenLastCalledWith(
+          mockRequest.body,
+          mockRequest.headers[HEADER_SIGNATURE_KEY],
+          [expect.any(String), expect.any(String)],
+        );
+      });
     });
 
-    it('should throw AuthError if signature is not verified', async () => {
-      reflector.get = jest
-        .fn()
-        .mockReturnValue([AuthSignatureRole.JobLauncher]);
+    describe('fail', () => {
+      it('should throw AuthError if signature is not verified', async () => {
+        reflector.get = jest
+          .fn()
+          .mockReturnValue([AuthSignatureRole.JobLauncher]);
 
-      mockRequest.headers[HEADER_SIGNATURE_KEY] = 'invalidSignature';
-      mockRequest.body = {
-        escrow_address: faker.finance.ethereumAddress(),
-        chain_id: ChainId.LOCALHOST,
-      };
-      (verifySignature as jest.Mock).mockReturnValue(false);
+        mockRequest.headers[HEADER_SIGNATURE_KEY] = 'invalidSignature';
+        mockRequest.body = {
+          escrow_address: faker.finance.ethereumAddress(),
+          chain_id: ChainId.LOCALHOST,
+        };
+        (verifySignature as jest.Mock).mockReturnValue(false);
 
-      await expect(guard.canActivate(context)).rejects.toThrow(AuthError);
-    });
+        await expect(guard.canActivate(context)).rejects.toThrow(AuthError);
+      });
 
-    it('should handle Worker role and verify signature', async () => {
-      reflector.get = jest.fn().mockReturnValue([AuthSignatureRole.Worker]);
+      it('should throw BadRequest error if assignment id is not number', async () => {
+        reflector.get = jest.fn().mockReturnValue([AuthSignatureRole.Worker]);
 
-      mockRequest.headers[HEADER_SIGNATURE_KEY] = 'validSignature';
-      const assignmentId = faker.number.int();
-      mockRequest.body = {
-        assignment_id: assignmentId,
-      };
-      (verifySignature as jest.Mock).mockReturnValue(true);
-      assignmentRepository.findOneById.mockResolvedValue({
-        workerAddress: '0xworkerAddress',
-      } as any);
+        mockRequest.headers[HEADER_SIGNATURE_KEY] = 'validSignature';
+        mockRequest.body = {
+          assignment_id: '123abc',
+        };
+        (verifySignature as jest.Mock).mockReturnValue(true);
+        assignmentRepository.findOneById.mockResolvedValue(null);
 
-      const result = await guard.canActivate(context);
-      expect(result).toBeTruthy();
-      expect(assignmentRepository.findOneById).toHaveBeenCalledWith(
-        assignmentId,
-      );
-    });
+        const resultPromise = guard.canActivate(context);
+        await expect(resultPromise).rejects.toBeInstanceOf(HttpException);
+        await expect(resultPromise).rejects.toThrow('Invalid assignment id');
+      });
 
-    it('should throw BadRequest error if assignment id is not number', async () => {
-      reflector.get = jest.fn().mockReturnValue([AuthSignatureRole.Worker]);
+      it('should throw AuthError if assignment is not found for Worker role', async () => {
+        reflector.get = jest.fn().mockReturnValue([AuthSignatureRole.Worker]);
 
-      mockRequest.headers[HEADER_SIGNATURE_KEY] = 'validSignature';
-      mockRequest.body = {
-        assignment_id: '123abc',
-      };
-      (verifySignature as jest.Mock).mockReturnValue(true);
-      assignmentRepository.findOneById.mockResolvedValue(null);
+        mockRequest.headers[HEADER_SIGNATURE_KEY] = 'validSignature';
+        mockRequest.body = {
+          assignment_id: 1,
+        };
+        (verifySignature as jest.Mock).mockReturnValue(true);
+        assignmentRepository.findOneById.mockResolvedValue(null);
 
-      const resultPromise = guard.canActivate(context);
-      await expect(resultPromise).rejects.toBeInstanceOf(HttpException);
-      await expect(resultPromise).rejects.toThrow('Invalid assignment id');
-    });
+        const resultPromise = guard.canActivate(context);
+        await expect(resultPromise).rejects.toBeInstanceOf(ValidationError);
+        await expect(resultPromise).rejects.toThrow(ErrorAssignment.NotFound);
+      });
 
-    it('should throw AuthError if assignment is not found for Worker role', async () => {
-      reflector.get = jest.fn().mockReturnValue([AuthSignatureRole.Worker]);
+      it('should throw ValidationError when escrow data is missing', async () => {
+        reflector.get = jest
+          .fn()
+          .mockReturnValue([AuthSignatureRole.JobLauncher]);
 
-      mockRequest.headers[HEADER_SIGNATURE_KEY] = 'validSignature';
-      mockRequest.body = {
-        assignment_id: 1,
-      };
-      (verifySignature as jest.Mock).mockReturnValue(true);
-      assignmentRepository.findOneById.mockResolvedValue(null);
+        (EscrowUtils.getEscrow as jest.Mock).mockResolvedValueOnce(null);
 
-      const resultPromise = guard.canActivate(context);
-      await expect(resultPromise).rejects.toBeInstanceOf(ValidationError);
-      await expect(resultPromise).rejects.toThrow(ErrorAssignment.NotFound);
-    });
+        mockRequest.headers[HEADER_SIGNATURE_KEY] = 'validSignature';
+        mockRequest.body = {
+          escrow_address: faker.finance.ethereumAddress(),
+          chain_id: ChainId.LOCALHOST,
+        };
 
-    it('should handle multiple roles and verify signature', async () => {
-      reflector.get = jest
-        .fn()
-        .mockReturnValue([
-          AuthSignatureRole.JobLauncher,
-          AuthSignatureRole.Recording,
-        ]);
-
-      mockRequest.headers[HEADER_SIGNATURE_KEY] = 'validSignature';
-      const mockEscrowAddress = faker.finance.ethereumAddress();
-      mockRequest.body = {
-        escrow_address: mockEscrowAddress,
-        chain_id: ChainId.LOCALHOST,
-        assignment_id: '1',
-      };
-      (verifySignature as jest.Mock).mockReturnValue(true);
-
-      const result = await guard.canActivate(context);
-      expect(result).toBeTruthy();
-      expect(EscrowUtils.getEscrow).toHaveBeenCalledWith(
-        ChainId.LOCALHOST,
-        mockEscrowAddress,
-      );
-      expect(verifySignature).toHaveBeenLastCalledWith(
-        mockRequest.body,
-        mockRequest.headers[HEADER_SIGNATURE_KEY],
-        [expect.any(String), expect.any(String)],
-      );
-    });
-
-    it('should throw ValidationError when escrow data is missing', async () => {
-      reflector.get = jest
-        .fn()
-        .mockReturnValue([AuthSignatureRole.JobLauncher]);
-
-      (EscrowUtils.getEscrow as jest.Mock).mockResolvedValueOnce(null);
-
-      mockRequest.headers[HEADER_SIGNATURE_KEY] = 'validSignature';
-      mockRequest.body = {
-        escrow_address: faker.finance.ethereumAddress(),
-        chain_id: ChainId.LOCALHOST,
-      };
-
-      const resultPromise = guard.canActivate(context);
-      await expect(resultPromise).rejects.toBeInstanceOf(ValidationError);
-      await expect(resultPromise).rejects.toThrow(ErrorEscrow.NotFound);
+        const resultPromise = guard.canActivate(context);
+        await expect(resultPromise).rejects.toBeInstanceOf(ValidationError);
+        await expect(resultPromise).rejects.toThrow(ErrorEscrow.NotFound);
+      });
     });
   });
 });

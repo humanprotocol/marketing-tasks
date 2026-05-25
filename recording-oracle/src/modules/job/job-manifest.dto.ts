@@ -91,7 +91,7 @@ class ManifestCampaignDto {
 
 class ManifestDto {
   @IsEnum(JobRequestType)
-  jobType!: JobRequestType;
+  requestType!: JobRequestType;
 
   @IsNumber()
   @Min(0)

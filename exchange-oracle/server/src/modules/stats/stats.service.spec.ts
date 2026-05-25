@@ -35,40 +35,44 @@ describe('statsService', () => {
   });
 
   describe('getOracleStats', () => {
-    it('should call assignmentRepository', async () => {
-      await statsService.getOracleStats();
-      expect(jobRepository.countJobsByStatus).toHaveBeenCalledTimes(3);
-      expect(assignmentRepository.countTotalWorkers).toHaveBeenCalledWith();
-      expect(
-        assignmentRepository.countCompletedAssignments,
-      ).toHaveBeenCalledWith();
-      expect(
-        assignmentRepository.countExpiredAssignments,
-      ).toHaveBeenCalledWith();
-      expect(
-        assignmentRepository.countRejectedAssignments,
-      ).toHaveBeenCalledWith();
+    describe('succeed', () => {
+      it('should call assignmentRepository', async () => {
+        await statsService.getOracleStats();
+        expect(jobRepository.countJobsByStatus).toHaveBeenCalledTimes(3);
+        expect(assignmentRepository.countTotalWorkers).toHaveBeenCalledWith();
+        expect(
+          assignmentRepository.countCompletedAssignments,
+        ).toHaveBeenCalledWith();
+        expect(
+          assignmentRepository.countExpiredAssignments,
+        ).toHaveBeenCalledWith();
+        expect(
+          assignmentRepository.countRejectedAssignments,
+        ).toHaveBeenCalledWith();
+      });
     });
   });
 
   describe('getAssignmentStats', () => {
-    it('should call assignmentR.getAssignmentStats', async () => {
-      await statsService.getAssignmentStats(userAddress);
-      expect(assignmentRepository.countTotalAssignments).toHaveBeenCalledWith(
-        userAddress,
-      );
-      expect(assignmentRepository.countSentAssignments).toHaveBeenCalledWith(
-        userAddress,
-      );
-      expect(
-        assignmentRepository.countCompletedAssignments,
-      ).toHaveBeenCalledWith(userAddress);
-      expect(assignmentRepository.countExpiredAssignments).toHaveBeenCalledWith(
-        userAddress,
-      );
-      expect(
-        assignmentRepository.countRejectedAssignments,
-      ).toHaveBeenCalledWith(userAddress);
+    describe('succeed', () => {
+      it('should call assignmentR.getAssignmentStats', async () => {
+        await statsService.getAssignmentStats(userAddress);
+        expect(assignmentRepository.countTotalAssignments).toHaveBeenCalledWith(
+          userAddress,
+        );
+        expect(assignmentRepository.countSentAssignments).toHaveBeenCalledWith(
+          userAddress,
+        );
+        expect(
+          assignmentRepository.countCompletedAssignments,
+        ).toHaveBeenCalledWith(userAddress);
+        expect(
+          assignmentRepository.countExpiredAssignments,
+        ).toHaveBeenCalledWith(userAddress);
+        expect(
+          assignmentRepository.countRejectedAssignments,
+        ).toHaveBeenCalledWith(userAddress);
+      });
     });
   });
 });

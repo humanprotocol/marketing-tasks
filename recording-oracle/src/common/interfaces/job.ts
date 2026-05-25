@@ -27,7 +27,7 @@ export interface IManifestCampaign {
 }
 
 export interface IManifest {
-  jobType: JobRequestType;
+  requestType: JobRequestType;
   endDate: number;
   platforms: string[];
   submissionsRequired: number;

@@ -40,19 +40,23 @@ describe('Web3Service', () => {
   });
 
   describe('getSigner', () => {
-    it('should return the signer for the specified chainId', async () => {
-      for (const network of networkConfigService.networks) {
-        const signer = web3Service.getSigner(network.chainId);
-        expect(signer).toBeDefined();
-      }
+    describe('succeed', () => {
+      it('should return the signer for the specified chainId', async () => {
+        for (const network of networkConfigService.networks) {
+          const signer = web3Service.getSigner(network.chainId);
+          expect(signer).toBeDefined();
+        }
+      });
     });
 
-    it('should return undefined if chainId is not configured', () => {
-      const chainId = 1;
+    describe('fail', () => {
+      it('should return undefined if chainId is not configured', () => {
+        const chainId = 1;
 
-      const signer = web3Service.getSigner(chainId);
+        const signer = web3Service.getSigner(chainId);
 
-      expect(signer).toBeUndefined();
+        expect(signer).toBeUndefined();
+      });
     });
   });
 });

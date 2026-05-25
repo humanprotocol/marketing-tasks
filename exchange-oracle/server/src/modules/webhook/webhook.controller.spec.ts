@@ -33,17 +33,19 @@ describe('webhookController', () => {
   });
 
   describe('processWebhook', () => {
-    it('should call jobService.createJob', async () => {
-      const webhook: WebhookDto = {
-        chainId,
-        escrowAddress,
-        eventType: EventType.ESCROW_CREATED,
-      };
-      jest.spyOn(jobService, 'createJob').mockResolvedValue();
+    describe('succeed', () => {
+      it('should call jobService.createJob', async () => {
+        const webhook: WebhookDto = {
+          chainId,
+          escrowAddress,
+          eventType: EventType.ESCROW_CREATED,
+        };
+        jest.spyOn(jobService, 'createJob').mockResolvedValue();
 
-      await webhookController.processWebhook(webhook);
+        await webhookController.processWebhook(webhook);
 
-      expect(jobService.createJob).toHaveBeenCalledWith(webhook);
+        expect(jobService.createJob).toHaveBeenCalledWith(webhook);
+      });
     });
   });
 });

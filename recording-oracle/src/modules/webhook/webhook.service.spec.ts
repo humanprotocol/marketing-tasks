@@ -1,3 +1,4 @@
+import { faker } from '@faker-js/faker';
 import { Test } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
 
@@ -5,6 +6,7 @@ import { EventType, WebhookStatus } from '../../common/enums/webhook';
 import { ServerConfigService } from '../../common/config/server-config.service';
 import { Web3ConfigService } from '../../common/config/web3-config.service';
 import { Web3Service } from '../web3/web3.service';
+import { generateWebhook } from './fixtures';
 import { WebhookRepository } from './webhook.repository';
 import { WebhookService } from './webhook.service';
 
@@ -13,7 +15,7 @@ describe('WebhookService', () => {
   let webhookRepository: WebhookRepository;
 
   const chainId = 1;
-  const escrowAddress = '0x1234567890123456789012345678901234567890';
+  const escrowAddress = faker.finance.ethereumAddress();
 
   beforeEach(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -31,7 +33,12 @@ describe('WebhookService', () => {
         { provide: Web3Service, useValue: { getSigner: jest.fn() } },
         {
           provide: Web3ConfigService,
-          useValue: { privateKey: '0x123' },
+          useValue: {
+            privateKey: faker.string.hexadecimal({
+              length: 66,
+              prefix: '0x',
+            }),
+          },
         },
         {
           provide: ServerConfigService,
@@ -48,50 +55,58 @@ describe('WebhookService', () => {
     expect(webhookService).toBeDefined();
   });
 
-  it('queues an outgoing webhook', async () => {
-    await webhookService.createWebhook(
-      chainId,
-      escrowAddress,
-      EventType.JOB_COMPLETED,
-      { foo: 'bar' },
-    );
+  describe('createWebhook', () => {
+    describe('succeed', () => {
+      it('queues an outgoing webhook', async () => {
+        await webhookService.createWebhook(
+          chainId,
+          escrowAddress,
+          EventType.JOB_COMPLETED,
+          { foo: 'bar' },
+        );
 
-    expect(webhookRepository.createUnique).toHaveBeenCalledWith(
-      expect.objectContaining({
-        chainId,
-        escrowAddress,
-        eventType: EventType.JOB_COMPLETED,
-        eventData: { foo: 'bar' },
-        status: WebhookStatus.PENDING,
-      }),
-    );
+        expect(webhookRepository.createUnique).toHaveBeenCalledWith(
+          expect.objectContaining({
+            chainId,
+            escrowAddress,
+            eventType: EventType.JOB_COMPLETED,
+            eventData: { foo: 'bar' },
+            status: WebhookStatus.PENDING,
+          }),
+        );
+      });
+    });
   });
 
-  it('marks an outgoing webhook as failed after max retries', async () => {
-    const webhook = {
-      chainId,
-      escrowAddress,
-      eventType: EventType.JOB_COMPLETED,
-      eventData: null,
-      retriesCount: 4,
-      status: WebhookStatus.PENDING,
-      waitUntil: new Date(),
-    };
+  describe('processPendingWebhooks', () => {
+    describe('fail', () => {
+      it('marks an outgoing webhook as failed after max retries', async () => {
+        const webhook = generateWebhook({
+          chainId,
+          escrowAddress,
+          eventType: EventType.JOB_COMPLETED,
+          eventData: null,
+          retriesCount: 4,
+          status: WebhookStatus.PENDING,
+          waitUntil: new Date(),
+        });
 
-    jest
-      .spyOn(webhookRepository, 'findByStatus')
-      .mockResolvedValue([webhook as any]);
-    jest
-      .spyOn(webhookService, 'sendWebhook')
-      .mockRejectedValue(new Error('HTTP request failed'));
+        jest
+          .spyOn(webhookRepository, 'findByStatus')
+          .mockResolvedValue([webhook]);
+        jest
+          .spyOn(webhookService, 'sendWebhook')
+          .mockRejectedValue(new Error('HTTP request failed'));
 
-    await webhookService.processPendingWebhooks();
+        await webhookService.processPendingWebhooks();
 
-    expect(webhookRepository.updateOne).toHaveBeenCalledWith(
-      expect.objectContaining({
-        retriesCount: 5,
-        status: WebhookStatus.FAILED,
-      }),
-    );
+        expect(webhookRepository.updateOne).toHaveBeenCalledWith(
+          expect.objectContaining({
+            retriesCount: 5,
+            status: WebhookStatus.FAILED,
+          }),
+        );
+      });
+    });
   });
 });
