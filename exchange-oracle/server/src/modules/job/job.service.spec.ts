@@ -1,8 +1,15 @@
+import { faker } from '@faker-js/faker';
 import { createMock } from '@golevelup/ts-jest';
 import { HMToken__factory } from '@human-protocol/core/typechain-types';
-import { Encryption, EncryptionUtils, EscrowClient } from '@human-protocol/sdk';
+import {
+  Encryption,
+  EncryptionUtils,
+  EscrowClient,
+  EscrowUtils,
+} from '@human-protocol/sdk';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import { ethers } from 'ethers';
 
 import {
   MOCK_ADDRESS,
@@ -371,6 +378,60 @@ describe('JobService', () => {
           jobType: JobType.SOCIAL_MEDIA_PROMOTION,
           status: JobStatus.ACTIVE,
         });
+      });
+
+      it('should calculate reward amount from net funded amount', async () => {
+        const decimals = faker.number.int({ min: 6, max: 18 });
+        const submissionsRequired = faker.number.int({ min: 1, max: 10 });
+        const fundedAmount = faker.number.int({ min: 100, max: 1000 });
+        const recordingOracleFee = faker.number.int({ min: 1, max: 5 });
+        const reputationOracleFee = faker.number.int({ min: 1, max: 5 });
+        const exchangeOracleFee = faker.number.int({ min: 1, max: 5 });
+        const totalFundedAmount =
+          BigInt(fundedAmount) * 10n ** BigInt(decimals);
+        const netFundAmount =
+          totalFundedAmount -
+          (totalFundedAmount * BigInt(recordingOracleFee)) / 100n -
+          (totalFundedAmount * BigInt(reputationOracleFee)) / 100n -
+          (totalFundedAmount * BigInt(exchangeOracleFee)) / 100n;
+        const expectedRewardAmount = (
+          Number(ethers.formatUnits(netFundAmount, decimals)) /
+          submissionsRequired
+        ).toString();
+        const manifest: ManifestDto = createManifest({
+          submissionsRequired,
+        });
+
+        jest.spyOn(jobService, 'getManifest').mockResolvedValue(manifest);
+        jest.spyOn(EscrowUtils, 'getEscrow').mockResolvedValue({
+          token: faker.finance.ethereumAddress(),
+          totalFundedAmount,
+          recordingOracleFee,
+          reputationOracleFee,
+          exchangeOracleFee,
+        } as any);
+        jest.spyOn(HMToken__factory, 'connect').mockReturnValue({
+          decimals: jest.fn().mockResolvedValue(decimals),
+        } as any);
+        jest
+          .spyOn(jobRepository, 'fetchFiltered')
+          .mockResolvedValueOnce({ entities: jobs as any, itemCount: 1 });
+
+        const result = await jobService.getJobList(
+          {
+            chainId,
+            jobType: JobType.SOCIAL_MEDIA_PROMOTION,
+            fields: [JobFieldName.RewardAmount],
+            escrowAddress,
+            status: JobStatus.ACTIVE,
+            page: 0,
+            pageSize: 10,
+            skip: 0,
+          },
+          workerAddress,
+        );
+
+        expect(result.results[0].rewardAmount).toBe(expectedRewardAmount);
       });
 
       it('should return an array of jobs without calling the manifest', async () => {
