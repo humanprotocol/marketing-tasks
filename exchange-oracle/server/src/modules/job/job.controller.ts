@@ -95,13 +95,13 @@ export class JobController {
   async solveJob(
     @Body() solveJobDto: SolveJobDto,
   ): Promise<SolveJobResponseDto> {
-    const { assignmentId, postUrl } = solveJobDto;
+    const { assignmentId, solution } = solveJobDto;
 
-    await this.jobService.solveJob(Number(assignmentId), postUrl);
+    await this.jobService.solveJob(Number(assignmentId), solution);
 
     const response: SolveJobResponseDto = {
       assignmentId,
-      postUrl,
+      solution,
       message: 'Job solved successfully.',
     };
     return response;

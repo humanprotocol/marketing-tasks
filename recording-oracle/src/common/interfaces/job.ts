@@ -4,6 +4,11 @@ import { VerificationResult } from '../enums/submission';
 export type AbuseProbability = 'low' | 'medium' | 'high';
 
 export interface IManifestRequirements {
+  targetPostUrl?: string;
+  checkLike?: boolean;
+  checkRepost?: boolean;
+  checkQuote?: boolean;
+  checkComment?: boolean;
   requiredHashtags?: string[];
   requiredKeywords?: string[];
   requiredLink?: string;
@@ -33,13 +38,13 @@ export interface IManifest {
   submissionsRequired: number;
   campaign: IManifestCampaign;
   requirements: IManifestRequirements;
-  aiValidation: IManifestAiValidation;
+  aiValidation?: IManifestAiValidation;
   qualifications?: string[];
 }
 
 export interface IRecordingResult {
   workerAddress: string;
-  postUrl: string;
+  solution: string;
   verificationResult: VerificationResult;
   rejectionReason?: string;
 }

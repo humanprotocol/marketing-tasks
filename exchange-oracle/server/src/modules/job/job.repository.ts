@@ -76,6 +76,11 @@ export class JobRepository extends BaseRepository<JobEntity> {
     if (data.status !== undefined) {
       queryBuilder.andWhere('job.status = :status', { status: data.status });
     }
+    if (data.jobType !== undefined) {
+      queryBuilder.andWhere('job.jobType = :jobType', {
+        jobType: data.jobType,
+      });
+    }
 
     if (data.createdAfter) {
       queryBuilder.andWhere('job.createdAt >= :createdAfter', {

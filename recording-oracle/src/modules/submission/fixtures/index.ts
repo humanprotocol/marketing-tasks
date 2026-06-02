@@ -13,7 +13,7 @@ export const generateSubmission = (
     id: faker.number.int({ min: 1 }),
     jobId: faker.number.int({ min: 1 }),
     workerAddress: faker.finance.ethereumAddress(),
-    postUrl: generatePostUrl(),
+    solution: generatePostUrl(),
     status: SubmissionStatus.PENDING,
     reason: null,
     ...overrides,

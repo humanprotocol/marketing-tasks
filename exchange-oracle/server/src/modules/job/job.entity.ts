@@ -1,7 +1,7 @@
 import { Column, Entity, Index, OneToMany } from 'typeorm';
 
 import { NS } from '../../common/constant';
-import { JobStatus } from '../../common/enums/job';
+import { JobStatus, JobType } from '../../common/enums/job';
 import { BaseEntity } from '../../database/base.entity';
 import { AssignmentEntity } from '../assignment/assignment.entity';
 
@@ -16,6 +16,9 @@ export class JobEntity extends BaseEntity {
 
   @Column({ type: 'varchar', nullable: true })
   public manifestUrl: string;
+
+  @Column({ type: 'varchar', default: JobType.SOCIAL_MEDIA_PROMOTION })
+  public jobType: JobType;
 
   @Column({ type: 'varchar' })
   public rewardToken: string;

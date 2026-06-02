@@ -22,6 +22,26 @@ import { AbuseProbability, IManifest } from '../../common/interfaces/job';
 
 class ManifestRequirementsDto {
   @IsOptional()
+  @IsString()
+  targetPostUrl?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  checkLike?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  checkRepost?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  checkQuote?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  checkComment?: boolean;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   requiredHashtags?: string[];
@@ -114,8 +134,9 @@ class ManifestDto {
   requirements!: ManifestRequirementsDto;
 
   @ValidateNested()
+  @IsOptional()
   @Type(() => ManifestAiValidationDto)
-  aiValidation!: ManifestAiValidationDto;
+  aiValidation?: ManifestAiValidationDto;
 
   @IsOptional()
   @IsArray()
@@ -144,6 +165,43 @@ export function validateManifestDto(manifest: IManifest): IManifest {
       undefined,
       flattenValidationErrors(validationErrors),
     );
+  }
+
+  if (
+    validatedManifest.requestType === JobRequestType.SOCIAL_MEDIA_PROMOTION &&
+    !validatedManifest.aiValidation
+  ) {
+    throw new ValidationError(ErrorJob.InvalidManifest, undefined, [
+      'aiValidation must be provided for social_media_promotion',
+    ]);
+  }
+
+  if (
+    validatedManifest.requestType === JobRequestType.SOCIAL_MEDIA_ENGAGEMENT
+  ) {
+    const requirements = validatedManifest.requirements;
+    const hasAnyEngagementCheck =
+      requirements.checkLike ||
+      requirements.checkRepost ||
+      requirements.checkQuote ||
+      requirements.checkComment;
+
+    if (!requirements.targetPostUrl || !hasAnyEngagementCheck) {
+      throw new ValidationError(ErrorJob.InvalidManifest, undefined, [
+        'targetPostUrl and at least one engagement check must be provided for social_media_engagement',
+      ]);
+    }
+
+    if (
+      requirements.checkComment &&
+      !requirements.checkLike &&
+      !requirements.checkRepost &&
+      !requirements.checkQuote
+    ) {
+      throw new ValidationError(ErrorJob.InvalidManifest, undefined, [
+        'checkComment requires checkLike, checkRepost, or checkQuote for social_media_engagement',
+      ]);
+    }
   }
 
   return validatedManifest as IManifest;

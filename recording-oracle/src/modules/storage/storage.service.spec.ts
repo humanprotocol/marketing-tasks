@@ -123,7 +123,7 @@ describe('StorageService', () => {
 
         const jobSolution = generateRecordingResult({
           workerAddress,
-          postUrl,
+          solution: postUrl,
           verificationResult: VerificationResult.ACCEPTED,
         });
         const fileData = await storageService.uploadJobSolutions(
@@ -162,7 +162,7 @@ describe('StorageService', () => {
 
         const jobSolution = generateRecordingResult({
           workerAddress,
-          postUrl,
+          solution: postUrl,
           verificationResult: VerificationResult.ACCEPTED,
         });
         await expect(
@@ -187,7 +187,7 @@ describe('StorageService', () => {
         jest.spyOn(pgpConfigService, 'encrypt', 'get').mockReturnValue(false);
         const jobSolution = generateRecordingResult({
           workerAddress,
-          postUrl,
+          solution: postUrl,
           verificationResult: VerificationResult.ACCEPTED,
         });
 
@@ -212,7 +212,7 @@ describe('StorageService', () => {
         jest.spyOn(pgpConfigService, 'encrypt', 'get').mockReturnValue(true);
         const jobSolution = generateRecordingResult({
           workerAddress,
-          postUrl,
+          solution: postUrl,
           verificationResult: VerificationResult.ACCEPTED,
         });
         await expect(
@@ -237,7 +237,7 @@ describe('StorageService', () => {
           solutions: [
             {
               workerAddress,
-              postUrl,
+              solution: postUrl,
             },
           ],
         };
@@ -258,7 +258,7 @@ describe('StorageService', () => {
           solutions: [
             {
               workerAddress,
-              postUrl,
+              solution: postUrl,
             },
           ],
         };

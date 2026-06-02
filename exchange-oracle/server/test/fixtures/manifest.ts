@@ -7,7 +7,7 @@ export function createManifest(
   overrides: Partial<ManifestDto> = {},
 ): ManifestDto {
   return {
-    jobType: JobType.SOCIAL_MEDIA_PROMOTION,
+    requestType: JobType.SOCIAL_MEDIA_PROMOTION,
     submissionsRequired: faker.number.int({ min: 1, max: 10 }),
     endDate: faker.date
       .soon({ days: 30, refDate: Date.now() + 14 * 24 * 60 * 60 * 1000 })

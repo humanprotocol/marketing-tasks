@@ -17,7 +17,7 @@ const SolutionForm: React.FC = () => {
       enabled: isConnected && !!address && !!connector,
     },
   });
-  const [post, setPost] = useState('');
+  const [solution, setSolution] = useState('');
 
   type SnackbarApi = {
     openSnackbar: (
@@ -40,14 +40,14 @@ const SolutionForm: React.FC = () => {
       return;
     }
     const message = {
-      post_url: post,
       assignment_id: assignmentId,
+      solution,
     };
 
     try {
       await jobService.solveJob(signer, message);
 
-      openSnackbar('Post sent successfully', 'success');
+      openSnackbar('Solution sent successfully', 'success');
     } catch (error) {
       showError(error);
     }
@@ -83,22 +83,22 @@ const SolutionForm: React.FC = () => {
             }}
           >
             <Typography variant="h4" mb={3}>
-              Submit Your Post
+              Submit Your Solution
             </Typography>
             <br />
             <br />
             <TextField
-              label="Post"
+              label="Solution"
               variant="outlined"
-              value={post}
-              onChange={(e) => setPost(e.target.value)}
+              value={solution}
+              onChange={(e) => setSolution(e.target.value)}
               sx={{ mb: 3, width: '300px' }}
             />
             <br />
             <Button
               variant="contained"
               onClick={handleSubmit}
-              disabled={!signer || !assignmentId || !post}
+              disabled={!signer || !assignmentId || !solution}
             >
               Submit
             </Button>

@@ -41,7 +41,7 @@ export const generateRecordingResult = (
   overrides: Partial<IRecordingResult> = {},
 ): IRecordingResult => ({
   workerAddress: faker.finance.ethereumAddress(),
-  postUrl: `https://x.com/${faker.internet.username()}/status/${faker.string.numeric(8)}`,
+  solution: `https://x.com/${faker.internet.username()}/status/${faker.string.numeric(8)}`,
   verificationResult: VerificationResult.ACCEPTED,
   ...overrides,
 });

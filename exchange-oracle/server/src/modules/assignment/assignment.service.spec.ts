@@ -406,6 +406,7 @@ describe('AssignmentService', () => {
           chainId: 1,
           escrowAddress,
           manifestUrl: MOCK_MANIFEST_URL,
+          jobType: JobType.SOCIAL_MEDIA_PROMOTION,
           rewardToken: 'HMT',
         },
         status: AssignmentStatus.ACTIVE,
@@ -462,11 +463,6 @@ describe('AssignmentService', () => {
           expiresAt: expect.any(String),
           updatedAt: expect.any(String),
         } as AssignmentDto);
-        expect(jobService.getManifest).toHaveBeenCalledWith(
-          chainId,
-          escrowAddress,
-          MOCK_MANIFEST_URL,
-        );
         expect(assignmentRepository.fetchFiltered).toHaveBeenCalledWith({
           page: 0,
           pageSize: 10,

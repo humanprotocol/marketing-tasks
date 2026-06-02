@@ -1,12 +1,18 @@
 import { Injectable } from '@nestjs/common';
 
 import { GrokConfigService } from '../../../common/config/grok-config.service';
+import { SubmissionRejectionReason } from '../../../common/constants/errors';
 import { ServerError } from '../../../common/errors';
 import {
   IManifest,
   IPostValidationResult,
 } from '../../../common/interfaces/job';
-import { ValidationService } from '../validation.service';
+import {
+  ABUSE_PRIORITY,
+  SUBMISSION_VALIDATION_RULES,
+} from '../../submission/submission.constants';
+import { SubmissionEntity } from '../../submission/submission.entity';
+import type { SubmissionValidationResult } from '../validation.service';
 import { GrokResponsesApiResponse } from './grok.interface';
 import {
   buildGrokValidationPrompt,
@@ -17,8 +23,27 @@ import {
 } from './grok.utils';
 
 @Injectable()
-export class GrokService implements ValidationService {
+export class GrokService {
   constructor(private readonly grokConfigService: GrokConfigService) {}
+
+  async validateSubmissions(
+    submissions: SubmissionEntity[],
+    manifest: IManifest,
+  ): Promise<SubmissionValidationResult[]> {
+    const results: SubmissionValidationResult[] = [];
+
+    for (const submission of submissions) {
+      const validation = await this.validatePost(submission.solution, manifest);
+      results.push({
+        submission,
+        rejectionReason: validation
+          ? this.getRejectionReason(validation, manifest)
+          : SubmissionRejectionReason.InvalidPostValidation,
+      });
+    }
+
+    return results;
+  }
 
   async validatePost(
     postUrl: string,
@@ -80,5 +105,25 @@ export class GrokService implements ValidationService {
     } catch {
       return null;
     }
+  }
+
+  private getRejectionReason(
+    validation: IPostValidationResult,
+    manifest: IManifest,
+  ): SubmissionRejectionReason | null {
+    for (const rule of SUBMISSION_VALIDATION_RULES) {
+      if (!rule.isValid(validation, manifest)) {
+        return rule.rejectionReason;
+      }
+    }
+
+    if (
+      ABUSE_PRIORITY[validation.overallBotProbability] >
+      ABUSE_PRIORITY[manifest.aiValidation!.allowedAbuseProbability]
+    ) {
+      return SubmissionRejectionReason.AbuseProbabilityTooHigh;
+    }
+
+    return null;
   }
 }

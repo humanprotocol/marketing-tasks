@@ -35,9 +35,9 @@ export class SubmissionEventData {
   @IsString()
   assigneeId: string;
 
-  @ApiProperty({ name: 'post_url' })
+  @ApiProperty()
   @IsString()
-  postUrl: string;
+  solution: string;
 }
 
 export type EventData =

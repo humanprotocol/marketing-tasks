@@ -44,7 +44,7 @@ export class JobService {
     const manifestUrl = await escrowClient.getManifest(escrowAddress);
     const manifest = await this.getManifest(manifestUrl);
 
-    if (manifest.requestType !== JobRequestType.SOCIAL_MEDIA_PROMOTION) {
+    if (!Object.values(JobRequestType).includes(manifest.requestType)) {
       throw new ValidationError(ErrorJob.InvalidJobType);
     }
 

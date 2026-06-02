@@ -179,6 +179,11 @@ export class AssignmentRepository extends BaseRepository<AssignmentEntity> {
         status: data.status,
       });
     }
+    if (data.jobType !== undefined) {
+      queryBuilder.andWhere('job.jobType = :jobType', {
+        jobType: data.jobType,
+      });
+    }
 
     if (data.createdAfter) {
       queryBuilder.andWhere('assignment.createdAt >= :createdAfter', {

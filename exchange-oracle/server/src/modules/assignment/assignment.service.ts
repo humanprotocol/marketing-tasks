@@ -4,7 +4,7 @@ import { Injectable } from '@nestjs/common';
 import logger from '../../logger';
 import { ServerConfigService } from '../../common/config/server-config.service';
 import { ErrorAssignment, ErrorJob } from '../../common/constant/errors';
-import { AssignmentStatus, JobStatus, JobType } from '../../common/enums/job';
+import { AssignmentStatus, JobStatus } from '../../common/enums/job';
 import {
   ConflictError,
   ServerError,
@@ -135,9 +135,6 @@ export class AssignmentService {
     workerAddress: string,
     reputationNetwork: string,
   ): Promise<PageDto<AssignmentDto>> {
-    if (data.jobType && data.jobType !== JobType.SOCIAL_MEDIA_PROMOTION)
-      return new PageDto(data.page!, data.pageSize!, 0, []);
-
     const { entities, itemCount } =
       await this.assignmentRepository.fetchFiltered({
         ...data,
@@ -152,7 +149,7 @@ export class AssignmentService {
           entity.id.toString(),
           entity.job.escrowAddress,
           entity.job.chainId,
-          JobType.SOCIAL_MEDIA_PROMOTION,
+          entity.job.jobType,
           entity.status,
           entity.rewardAmount,
           entity.job.rewardToken,
