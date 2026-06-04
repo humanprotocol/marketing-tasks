@@ -1,0 +1,17 @@
+{
+  "requestType": "social_media_engagement",
+  "submissionsRequired": 1,
+  "endDate": 1808326717000,
+  "platforms": ["x"],
+  "campaign": {
+    "name": "X Engagement Local Test Campaign",
+    "description": "Comment on the target X post."
+  },
+  "requirements": {
+    "targetPostUrl": "https://x.com/human_protocol/status/2052350654287360320",
+    "checkLike": true,
+    "checkRepost": false,
+    "checkQuote": true,
+    "checkComment": true
+  }
+}
