@@ -64,9 +64,9 @@ export const envValidator = Joi.object({
     otherwise: Joi.string().optional(),
   }),
   // Grok
-  GROK_API_KEY: Joi.string().required(),
+  GROK_API_KEY: Joi.string().optional(),
   GROK_BASE_URL: Joi.string().uri(),
-  GROK_MODEL: Joi.string().required(),
+  GROK_MODEL: Joi.string().optional(),
   // X API
   X_CONSUMER_KEY: Joi.string().optional(),
   X_CONSUMER_SECRET: Joi.string().optional(),

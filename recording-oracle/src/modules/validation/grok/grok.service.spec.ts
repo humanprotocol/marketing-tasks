@@ -17,6 +17,11 @@ import { ISocialMediaPromotionManifest } from '../../../common/interfaces/job';
 describe('GrokService', () => {
   let grokService: GrokService;
   let fetchMock: jest.Mock;
+  let grokConfigService: {
+    apiKey?: string;
+    baseUrl: string;
+    model: string;
+  };
 
   const baseUrl = 'https://api.x.ai/v1';
   const apiKey = faker.string.alphanumeric(32);
@@ -40,17 +45,18 @@ describe('GrokService', () => {
   beforeEach(async () => {
     fetchMock = jest.fn();
     global.fetch = fetchMock;
+    grokConfigService = {
+      apiKey,
+      baseUrl,
+      model,
+    };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
         GrokService,
         {
           provide: GrokConfigService,
-          useValue: {
-            apiKey,
-            baseUrl,
-            model,
-          },
+          useValue: grokConfigService,
         },
       ],
     }).compile();
@@ -251,6 +257,20 @@ describe('GrokService', () => {
             generateManifest() as ISocialMediaPromotionManifest,
           ),
         ).rejects.toBeInstanceOf(ServerError);
+      });
+
+      it('fails promotion Grok calls clearly when API key config is missing', async () => {
+        grokConfigService.apiKey = undefined;
+
+        await expect(
+          grokService.validatePost(
+            faker.internet.url(),
+            generateManifest() as ISocialMediaPromotionManifest,
+          ),
+        ).rejects.toThrow(
+          'Grok config is required to process social_media_promotion jobs',
+        );
+        expect(fetchMock).not.toHaveBeenCalled();
       });
     });
   });

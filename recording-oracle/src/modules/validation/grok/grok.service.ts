@@ -44,7 +44,7 @@ export class GrokService {
     postUrl: string,
     manifest: ISocialMediaPromotionManifest,
   ): Promise<IPostValidationResult | null> {
-    const apiKey = this.grokConfigService.apiKey;
+    const apiKey = this.getApiKey();
 
     const response = await fetch(
       `${this.grokConfigService.baseUrl}/responses`,
@@ -120,5 +120,17 @@ export class GrokService {
     }
 
     return null;
+  }
+
+  private getApiKey(): string {
+    const { apiKey } = this.grokConfigService;
+
+    if (!apiKey) {
+      throw new ServerError(
+        'Grok config is required to process social_media_promotion jobs',
+      );
+    }
+
+    return apiKey;
   }
 }
