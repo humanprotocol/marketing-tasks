@@ -490,12 +490,8 @@ export class XApiService {
   }
 
   private getOAuthCredentials(): XApiCredentials {
-    const {
-      consumerKey,
-      consumerSecret,
-      accessToken,
-      accessTokenSecret,
-    } = this.xApiConfigService;
+    const { consumerKey, consumerSecret, accessToken, accessTokenSecret } =
+      this.xApiConfigService;
 
     if (!consumerKey || !consumerSecret || !accessToken || !accessTokenSecret) {
       throw new ServerError(

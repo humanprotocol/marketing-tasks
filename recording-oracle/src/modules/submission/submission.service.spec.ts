@@ -207,18 +207,10 @@ describe('SubmissionService', () => {
 
       expect(
         validationService.validatePromotionSubmission,
-      ).toHaveBeenNthCalledWith(
-        1,
-        firstPendingSubmission,
-        manifest,
-      );
+      ).toHaveBeenNthCalledWith(1, firstPendingSubmission, manifest);
       expect(
         validationService.validatePromotionSubmission,
-      ).toHaveBeenNthCalledWith(
-        2,
-        secondPendingSubmission,
-        manifest,
-      );
+      ).toHaveBeenNthCalledWith(2, secondPendingSubmission, manifest);
       expect(submissionRepository.updateOne).toHaveBeenCalledWith(
         expect.objectContaining({
           id: firstPendingSubmission.id,
@@ -247,7 +239,9 @@ describe('SubmissionService', () => {
       });
       const error = new Error('Grok request failed');
 
-      validationService.validatePromotionSubmission.mockRejectedValueOnce(error);
+      validationService.validatePromotionSubmission.mockRejectedValueOnce(
+        error,
+      );
       validationService.validatePromotionSubmission.mockResolvedValueOnce({
         submission: acceptedSubmission,
         rejectionReason: null,
@@ -268,18 +262,10 @@ describe('SubmissionService', () => {
 
       expect(
         validationService.validatePromotionSubmission,
-      ).toHaveBeenNthCalledWith(
-        1,
-        failedSubmission,
-        manifest,
-      );
+      ).toHaveBeenNthCalledWith(1, failedSubmission, manifest);
       expect(
         validationService.validatePromotionSubmission,
-      ).toHaveBeenNthCalledWith(
-        2,
-        acceptedSubmission,
-        manifest,
-      );
+      ).toHaveBeenNthCalledWith(2, acceptedSubmission, manifest);
       expect(submissionRepository.updateOne).toHaveBeenCalledWith(
         expect.objectContaining({
           id: failedSubmission.id,
@@ -325,10 +311,9 @@ describe('SubmissionService', () => {
         })),
       );
 
-      expect(validationService.validateEngagementSubmissions).toHaveBeenCalledWith(
-        submissions,
-        manifest,
-      );
+      expect(
+        validationService.validateEngagementSubmissions,
+      ).toHaveBeenCalledWith(submissions, manifest);
     });
   });
 });

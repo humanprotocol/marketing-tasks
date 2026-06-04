@@ -2,10 +2,7 @@ import { faker } from '@faker-js/faker';
 
 import { JobRequestType, JobStatus } from '../../../common/enums/job';
 import { VerificationResult } from '../../../common/enums/submission';
-import {
-  IManifest,
-  IRecordingResult,
-} from '../../../common/interfaces/job';
+import { IManifest, IRecordingResult } from '../../../common/interfaces/job';
 import { JobEntity } from '../job.entity';
 
 export const generateManifest = (

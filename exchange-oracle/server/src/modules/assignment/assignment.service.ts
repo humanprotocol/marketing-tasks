@@ -90,8 +90,7 @@ export class AssignmentService {
       'minLiveDurationHours' in manifest.requirements
         ? (manifest.requirements.minLiveDurationHours ?? 0)
         : 0;
-    const requiredLiveDurationMs =
-      requiredLiveDurationHours * 60 * 60 * 1000;
+    const requiredLiveDurationMs = requiredLiveDurationHours * 60 * 60 * 1000;
     if (jobEndDate.getTime() - Date.now() < requiredLiveDurationMs) {
       throw new ValidationError(
         ErrorAssignment.InsufficientTimeForLiveDuration,
