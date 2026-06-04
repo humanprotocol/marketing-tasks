@@ -18,29 +18,13 @@ import {
 import { ErrorJob } from '../../common/constants/errors';
 import { JobRequestType } from '../../common/enums/job';
 import { ValidationError } from '../../common/errors';
-import { AbuseProbability, IManifest } from '../../common/interfaces/job';
+import {
+  AbuseProbability,
+  IManifest,
+  ISocialMediaEngagementRequirements,
+} from '../../common/interfaces/job';
 
-class ManifestRequirementsDto {
-  @IsOptional()
-  @IsString()
-  targetPostUrl?: string;
-
-  @IsOptional()
-  @IsBoolean()
-  checkLike?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  checkRepost?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  checkQuote?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  checkComment?: boolean;
-
+class SocialMediaPromotionRequirementsDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -94,6 +78,28 @@ class ManifestRequirementsDto {
   minReposts?: number;
 }
 
+class SocialMediaEngagementRequirementsDto {
+  @IsString()
+  @IsNotEmpty()
+  targetPostUrl!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  checkLike?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  checkRepost?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  checkQuote?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  checkComment?: boolean;
+}
+
 class ManifestAiValidationDto {
   @IsIn(['low', 'medium', 'high'])
   allowedAbuseProbability!: AbuseProbability;
@@ -130,8 +136,14 @@ class ManifestDto {
   campaign!: ManifestCampaignDto;
 
   @ValidateNested()
-  @Type(() => ManifestRequirementsDto)
-  requirements!: ManifestRequirementsDto;
+  @Type((options) =>
+    options?.object?.requestType === JobRequestType.SOCIAL_MEDIA_ENGAGEMENT
+      ? SocialMediaEngagementRequirementsDto
+      : SocialMediaPromotionRequirementsDto,
+  )
+  requirements!:
+    | SocialMediaPromotionRequirementsDto
+    | SocialMediaEngagementRequirementsDto;
 
   @ValidateNested()
   @IsOptional()
@@ -179,7 +191,8 @@ export function validateManifestDto(manifest: IManifest): IManifest {
   if (
     validatedManifest.requestType === JobRequestType.SOCIAL_MEDIA_ENGAGEMENT
   ) {
-    const requirements = validatedManifest.requirements;
+    const requirements =
+      validatedManifest.requirements as ISocialMediaEngagementRequirements;
     const hasAnyEngagementCheck =
       requirements.checkLike ||
       requirements.checkRepost ||

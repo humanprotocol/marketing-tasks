@@ -4,7 +4,7 @@ import { Injectable } from '@nestjs/common';
 import logger from '../../logger';
 import { ServerConfigService } from '../../common/config/server-config.service';
 import { ErrorAssignment, ErrorJob } from '../../common/constant/errors';
-import { AssignmentStatus, JobStatus } from '../../common/enums/job';
+import { AssignmentStatus, JobStatus, JobType } from '../../common/enums/job';
 import {
   ConflictError,
   ServerError,
@@ -85,8 +85,13 @@ export class AssignmentService {
     }
 
     const jobEndDate = new Date(manifest.endDate);
+    const requiredLiveDurationHours =
+      manifest.requestType === JobType.SOCIAL_MEDIA_PROMOTION &&
+      'minLiveDurationHours' in manifest.requirements
+        ? (manifest.requirements.minLiveDurationHours ?? 0)
+        : 0;
     const requiredLiveDurationMs =
-      (manifest.requirements.minLiveDurationHours ?? 0) * 60 * 60 * 1000;
+      requiredLiveDurationHours * 60 * 60 * 1000;
     if (jobEndDate.getTime() - Date.now() < requiredLiveDurationMs) {
       throw new ValidationError(
         ErrorAssignment.InsufficientTimeForLiveDuration,

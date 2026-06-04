@@ -12,6 +12,7 @@ import {
 } from './grok.utils';
 import { generateGrokResponse } from './fixtures';
 import { GrokService } from './grok.service';
+import { ISocialMediaPromotionManifest } from '../../../common/interfaces/job';
 
 describe('GrokService', () => {
   let grokService: GrokService;
@@ -77,7 +78,10 @@ describe('GrokService', () => {
         });
 
         await expect(
-          grokService.validatePost(postUrl, manifest),
+          grokService.validatePost(
+            postUrl,
+            manifest as ISocialMediaPromotionManifest,
+          ),
         ).resolves.toEqual(
           expect.objectContaining({
             postExists: true,
@@ -161,7 +165,10 @@ describe('GrokService', () => {
         });
 
         await expect(
-          grokService.validatePost(faker.internet.url(), manifest),
+          grokService.validatePost(
+            faker.internet.url(),
+            manifest as ISocialMediaPromotionManifest,
+          ),
         ).resolves.toEqual(validationResult);
       });
 
@@ -172,7 +179,10 @@ describe('GrokService', () => {
         });
 
         await expect(
-          grokService.validatePost(faker.internet.url(), generateManifest()),
+          grokService.validatePost(
+            faker.internet.url(),
+            generateManifest() as ISocialMediaPromotionManifest,
+          ),
         ).resolves.toBeNull();
       });
 
@@ -183,7 +193,10 @@ describe('GrokService', () => {
         });
 
         await expect(
-          grokService.validatePost(faker.internet.url(), generateManifest()),
+          grokService.validatePost(
+            faker.internet.url(),
+            generateManifest() as ISocialMediaPromotionManifest,
+          ),
         ).resolves.toBeNull();
       });
     });
@@ -203,7 +216,10 @@ describe('GrokService', () => {
         });
 
         await expect(
-          grokService.validatePost(faker.internet.url(), generateManifest()),
+          grokService.validatePost(
+            faker.internet.url(),
+            generateManifest() as ISocialMediaPromotionManifest,
+          ),
         ).rejects.toThrow(errorMessage);
       });
 
@@ -215,7 +231,10 @@ describe('GrokService', () => {
         });
 
         await expect(
-          grokService.validatePost(faker.internet.url(), generateManifest()),
+          grokService.validatePost(
+            faker.internet.url(),
+            generateManifest() as ISocialMediaPromotionManifest,
+          ),
         ).rejects.toThrow('Grok API request failed with HTTP 500');
       });
 
@@ -227,7 +246,10 @@ describe('GrokService', () => {
         });
 
         await expect(
-          grokService.validatePost(faker.internet.url(), generateManifest()),
+          grokService.validatePost(
+            faker.internet.url(),
+            generateManifest() as ISocialMediaPromotionManifest,
+          ),
         ).rejects.toBeInstanceOf(ServerError);
       });
     });

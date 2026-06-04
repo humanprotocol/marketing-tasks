@@ -4,7 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { XApiConfigService } from '../../../common/config/x-api-config.service';
 import { SubmissionRejectionReason } from '../../../common/constants/errors';
 import { ServerError, ValidationError } from '../../../common/errors';
-import { IManifest } from '../../../common/interfaces/job';
+import { ISocialMediaEngagementManifest } from '../../../common/interfaces/job';
 import { SubmissionEntity } from '../../submission/submission.entity';
 import type { SubmissionValidationResult } from '../validation.service';
 import {
@@ -27,7 +27,7 @@ export class XApiService {
 
   async validateSubmissions(
     submissions: SubmissionEntity[],
-    manifest: IManifest,
+    manifest: ISocialMediaEngagementManifest,
   ): Promise<SubmissionValidationResult[]> {
     const targetPostId = this.extractPostId(
       manifest.requirements.targetPostUrl,
@@ -235,7 +235,7 @@ export class XApiService {
 
   private getRejectionReason(
     username: string,
-    manifest: IManifest,
+    manifest: ISocialMediaEngagementManifest,
     matches: EngagementMatches,
   ): SubmissionRejectionReason | null {
     if (

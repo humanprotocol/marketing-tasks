@@ -6,6 +6,7 @@ import { JobRequestType } from '../../../common/enums/job';
 import { generateManifest } from '../../job/fixtures';
 import { generateSubmission } from '../../submission/fixtures';
 import { XApiService } from './x-api.service';
+import { ISocialMediaEngagementManifest } from '../../../common/interfaces/job';
 
 type XApiConfigServiceMock = {
   consumerKey?: string;
@@ -159,7 +160,10 @@ describe('XApiService', () => {
       .mockResolvedValue(new Set(['alice']));
 
     await expect(
-      service.validateSubmissions(submissions, manifest),
+      service.validateSubmissions(
+        submissions,
+        manifest as ISocialMediaEngagementManifest,
+      ),
     ).resolves.toEqual([
       {
         submission: submissions[0],
@@ -215,7 +219,10 @@ describe('XApiService', () => {
     );
 
     await expect(
-      service.validateSubmissions(submissions, manifest),
+      service.validateSubmissions(
+        submissions,
+        manifest as ISocialMediaEngagementManifest,
+      ),
     ).resolves.toEqual([
       {
         submission: submissions[0],
@@ -257,7 +264,10 @@ describe('XApiService', () => {
       .mockResolvedValue(new Set(['alice']));
 
     await expect(
-      service.validateSubmissions(submissions, manifest),
+      service.validateSubmissions(
+        submissions,
+        manifest as ISocialMediaEngagementManifest,
+      ),
     ).resolves.toEqual([
       {
         submission: submissions[0],
@@ -303,7 +313,10 @@ describe('XApiService', () => {
     );
 
     await expect(
-      service.validateSubmissions(submissions, manifest),
+      service.validateSubmissions(
+        submissions,
+        manifest as ISocialMediaEngagementManifest,
+      ),
     ).resolves.toEqual([
       {
         submission: submissions[0],

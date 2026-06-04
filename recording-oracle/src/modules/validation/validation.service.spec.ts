@@ -1,7 +1,10 @@
 import { Test } from '@nestjs/testing';
 
-import { ErrorJob } from '../../common/constants/errors';
 import { JobRequestType } from '../../common/enums/job';
+import {
+  ISocialMediaEngagementManifest,
+  ISocialMediaPromotionManifest,
+} from '../../common/interfaces/job';
 import { generateManifest } from '../job/fixtures';
 import { generateSubmission } from '../submission/fixtures';
 import { GrokService } from './grok/grok.service';
@@ -20,7 +23,7 @@ describe('ValidationService', () => {
         {
           provide: GrokService,
           useValue: {
-            validateSubmissions: jest.fn(),
+            validateSubmission: jest.fn(),
           },
         },
         {
@@ -40,22 +43,20 @@ describe('ValidationService', () => {
   it('delegates promotion validation to Grok', async () => {
     const manifest = generateManifest({
       requestType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
-    });
-    const submissions = [generateSubmission()];
-    const validationResults = [
-      {
-        submission: submissions[0],
-        rejectionReason: null,
-      },
-    ];
-    grokService.validateSubmissions.mockResolvedValue(validationResults);
+    }) as ISocialMediaPromotionManifest;
+    const submission = generateSubmission();
+    const validationResult = {
+      submission,
+      rejectionReason: null,
+    };
+    grokService.validateSubmission.mockResolvedValue(validationResult);
 
     await expect(
-      validationService.validateSubmissions(submissions, manifest),
-    ).resolves.toBe(validationResults);
+      validationService.validatePromotionSubmission(submission, manifest),
+    ).resolves.toBe(validationResult);
 
-    expect(grokService.validateSubmissions).toHaveBeenCalledWith(
-      submissions,
+    expect(grokService.validateSubmission).toHaveBeenCalledWith(
+      submission,
       manifest,
     );
     expect(xApiService.validateSubmissions).not.toHaveBeenCalled();
@@ -64,7 +65,7 @@ describe('ValidationService', () => {
   it('delegates engagement validation to X API', async () => {
     const manifest = generateManifest({
       requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
-    });
+    }) as ISocialMediaEngagementManifest;
     const submissions = [generateSubmission({ solution: 'humanprotocol' })];
     const validationResults = [
       {
@@ -75,23 +76,13 @@ describe('ValidationService', () => {
     xApiService.validateSubmissions.mockResolvedValue(validationResults);
 
     await expect(
-      validationService.validateSubmissions(submissions, manifest),
+      validationService.validateEngagementSubmissions(submissions, manifest),
     ).resolves.toBe(validationResults);
 
     expect(xApiService.validateSubmissions).toHaveBeenCalledWith(
       submissions,
       manifest,
     );
-    expect(grokService.validateSubmissions).not.toHaveBeenCalled();
-  });
-
-  it('rejects unsupported job types', async () => {
-    const manifest = generateManifest({
-      requestType: 'unsupported' as JobRequestType,
-    });
-
-    await expect(
-      validationService.validateSubmissions([generateSubmission()], manifest),
-    ).rejects.toThrow(ErrorJob.InvalidJobType);
+    expect(grokService.validateSubmission).not.toHaveBeenCalled();
   });
 });

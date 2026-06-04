@@ -2,26 +2,52 @@ import { faker } from '@faker-js/faker';
 
 import { JobRequestType, JobStatus } from '../../../common/enums/job';
 import { VerificationResult } from '../../../common/enums/submission';
-import { IManifest, IRecordingResult } from '../../../common/interfaces/job';
+import {
+  IManifest,
+  IRecordingResult,
+} from '../../../common/interfaces/job';
 import { JobEntity } from '../job.entity';
 
 export const generateManifest = (
   overrides: Partial<IManifest> = {},
-): IManifest => ({
-  requestType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
-  endDate: faker.date.future().getTime(),
-  platforms: ['x'],
-  submissionsRequired: 2,
-  campaign: {
-    name: faker.company.name(),
-    description: faker.lorem.sentence(),
-  },
-  requirements: {},
-  aiValidation: {
-    allowedAbuseProbability: 'medium',
-  },
-  ...overrides,
-});
+): IManifest => {
+  const requestType =
+    overrides.requestType ?? JobRequestType.SOCIAL_MEDIA_PROMOTION;
+
+  if (requestType === JobRequestType.SOCIAL_MEDIA_ENGAGEMENT) {
+    return {
+      requestType,
+      endDate: faker.date.future().getTime(),
+      platforms: ['x'],
+      submissionsRequired: 2,
+      campaign: {
+        name: faker.company.name(),
+        description: faker.lorem.sentence(),
+      },
+      requirements: {
+        targetPostUrl: `https://x.com/${faker.internet.username()}/status/${faker.string.numeric(8)}`,
+        checkLike: true,
+      },
+      ...overrides,
+    } as IManifest;
+  }
+
+  return {
+    requestType,
+    endDate: faker.date.future().getTime(),
+    platforms: ['x'],
+    submissionsRequired: 2,
+    campaign: {
+      name: faker.company.name(),
+      description: faker.lorem.sentence(),
+    },
+    requirements: {},
+    aiValidation: {
+      allowedAbuseProbability: 'medium',
+    },
+    ...overrides,
+  } as IManifest;
+};
 
 export const generateJob = (overrides: Partial<JobEntity> = {}): JobEntity =>
   ({

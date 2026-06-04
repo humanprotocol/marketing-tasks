@@ -10,7 +10,12 @@ import {
 } from '../../common/enums/submission';
 import { JobRequestType } from '../../common/enums/job';
 import { ValidationError } from '../../common/errors';
-import { IManifest, IRecordingResult } from '../../common/interfaces/job';
+import {
+  IManifest,
+  IRecordingResult,
+  ISocialMediaEngagementManifest,
+  ISocialMediaPromotionManifest,
+} from '../../common/interfaces/job';
 import { JobService } from '../../modules/job/job.service';
 import {
   SubmissionValidationResult,
@@ -54,24 +59,6 @@ export class SubmissionService {
     throw new ValidationError(ErrorSubmission.MissingSubmissionData);
   }
 
-  async processSubmission(
-    submission: SubmissionEntity,
-    manifest: IManifest,
-  ): Promise<IRecordingResult> {
-    try {
-      const [validationResult] =
-        await this.validationService.validateSubmissions(
-          [submission],
-          manifest,
-        );
-
-      return this.recordValidationResult(validationResult);
-    } catch (error) {
-      await this.handleFailedSubmission(submission, error);
-      throw error;
-    }
-  }
-
   async processSubmissions(
     submissions: SubmissionEntity[],
     manifest: IManifest,
@@ -95,9 +82,18 @@ export class SubmissionService {
       return allResults;
     }
 
-    if (manifest.requestType !== JobRequestType.SOCIAL_MEDIA_ENGAGEMENT) {
+    if (manifest.requestType === JobRequestType.SOCIAL_MEDIA_PROMOTION) {
       for (const submission of pendingSubmissions) {
-        allResults.push(await this.processSubmission(submission, manifest));
+        try {
+          const validationResult =
+            await this.validationService.validatePromotionSubmission(
+              submission,
+              manifest as ISocialMediaPromotionManifest,
+            );
+          allResults.push(await this.recordValidationResult(validationResult));
+        } catch (error) {
+          await this.handleFailedSubmission(submission, error);
+        }
       }
 
       return allResults;
@@ -105,9 +101,9 @@ export class SubmissionService {
 
     try {
       const validationResults =
-        await this.validationService.validateSubmissions(
+        await this.validationService.validateEngagementSubmissions(
           pendingSubmissions,
-          manifest,
+          manifest as ISocialMediaEngagementManifest,
         );
 
       for (const validationResult of validationResults) {

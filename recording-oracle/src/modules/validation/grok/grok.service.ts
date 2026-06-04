@@ -4,8 +4,8 @@ import { GrokConfigService } from '../../../common/config/grok-config.service';
 import { SubmissionRejectionReason } from '../../../common/constants/errors';
 import { ServerError } from '../../../common/errors';
 import {
-  IManifest,
   IPostValidationResult,
+  ISocialMediaPromotionManifest,
 } from '../../../common/interfaces/job';
 import {
   ABUSE_PRIORITY,
@@ -26,28 +26,23 @@ import {
 export class GrokService {
   constructor(private readonly grokConfigService: GrokConfigService) {}
 
-  async validateSubmissions(
-    submissions: SubmissionEntity[],
-    manifest: IManifest,
-  ): Promise<SubmissionValidationResult[]> {
-    const results: SubmissionValidationResult[] = [];
+  async validateSubmission(
+    submission: SubmissionEntity,
+    manifest: ISocialMediaPromotionManifest,
+  ): Promise<SubmissionValidationResult> {
+    const validation = await this.validatePost(submission.solution, manifest);
 
-    for (const submission of submissions) {
-      const validation = await this.validatePost(submission.solution, manifest);
-      results.push({
-        submission,
-        rejectionReason: validation
-          ? this.getRejectionReason(validation, manifest)
-          : SubmissionRejectionReason.InvalidPostValidation,
-      });
-    }
-
-    return results;
+    return {
+      submission,
+      rejectionReason: validation
+        ? this.getRejectionReason(validation, manifest)
+        : SubmissionRejectionReason.InvalidPostValidation,
+    };
   }
 
   async validatePost(
     postUrl: string,
-    manifest: IManifest,
+    manifest: ISocialMediaPromotionManifest,
   ): Promise<IPostValidationResult | null> {
     const apiKey = this.grokConfigService.apiKey;
 
@@ -109,7 +104,7 @@ export class GrokService {
 
   private getRejectionReason(
     validation: IPostValidationResult,
-    manifest: IManifest,
+    manifest: ISocialMediaPromotionManifest,
   ): SubmissionRejectionReason | null {
     for (const rule of SUBMISSION_VALIDATION_RULES) {
       if (!rule.isValid(validation, manifest)) {
@@ -119,7 +114,7 @@ export class GrokService {
 
     if (
       ABUSE_PRIORITY[validation.overallBotProbability] >
-      ABUSE_PRIORITY[manifest.aiValidation!.allowedAbuseProbability]
+      ABUSE_PRIORITY[manifest.aiValidation.allowedAbuseProbability]
     ) {
       return SubmissionRejectionReason.AbuseProbabilityTooHigh;
     }

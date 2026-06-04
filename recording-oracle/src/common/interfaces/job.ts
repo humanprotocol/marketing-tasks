@@ -3,12 +3,7 @@ import { VerificationResult } from '../enums/submission';
 
 export type AbuseProbability = 'low' | 'medium' | 'high';
 
-export interface IManifestRequirements {
-  targetPostUrl?: string;
-  checkLike?: boolean;
-  checkRepost?: boolean;
-  checkQuote?: boolean;
-  checkComment?: boolean;
+export interface ISocialMediaPromotionRequirements {
   requiredHashtags?: string[];
   requiredKeywords?: string[];
   requiredLink?: string;
@@ -22,6 +17,18 @@ export interface IManifestRequirements {
   minReposts?: number;
 }
 
+export interface ISocialMediaEngagementRequirements {
+  targetPostUrl: string;
+  checkLike?: boolean;
+  checkRepost?: boolean;
+  checkQuote?: boolean;
+  checkComment?: boolean;
+}
+
+export type IManifestRequirements =
+  | ISocialMediaPromotionRequirements
+  | ISocialMediaEngagementRequirements;
+
 export interface IManifestAiValidation {
   allowedAbuseProbability: AbuseProbability;
 }
@@ -31,16 +38,27 @@ export interface IManifestCampaign {
   description: string;
 }
 
-export interface IManifest {
+interface IBaseManifest {
   requestType: JobRequestType;
   endDate: number;
   platforms: string[];
   submissionsRequired: number;
   campaign: IManifestCampaign;
-  requirements: IManifestRequirements;
-  aiValidation?: IManifestAiValidation;
   qualifications?: string[];
 }
+
+export interface ISocialMediaPromotionManifest extends IBaseManifest {
+  requirements: ISocialMediaPromotionRequirements;
+  aiValidation: IManifestAiValidation;
+}
+
+export interface ISocialMediaEngagementManifest extends IBaseManifest {
+  requirements: ISocialMediaEngagementRequirements;
+}
+
+export type IManifest =
+  | ISocialMediaPromotionManifest
+  | ISocialMediaEngagementManifest;
 
 export interface IRecordingResult {
   workerAddress: string;

@@ -356,7 +356,6 @@ describe('JobService', () => {
             checkRepost: true,
             checkComment: true,
           },
-          aiValidation: undefined,
         });
         storageService.download.mockResolvedValue(manifest);
 
@@ -379,7 +378,6 @@ describe('JobService', () => {
             checkQuote: true,
             checkComment: false,
           },
-          aiValidation: undefined,
         });
         storageService.download.mockResolvedValue(manifest);
 
@@ -415,7 +413,6 @@ describe('JobService', () => {
               checkRepost: false,
               checkComment: true,
             },
-            aiValidation: undefined,
           }),
         );
 

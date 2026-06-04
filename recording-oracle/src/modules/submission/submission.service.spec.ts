@@ -61,7 +61,8 @@ describe('SubmissionService', () => {
         {
           provide: ValidationService,
           useValue: {
-            validateSubmissions: jest.fn(),
+            validatePromotionSubmission: jest.fn(),
+            validateEngagementSubmissions: jest.fn(),
           },
         },
       ],
@@ -171,18 +172,14 @@ describe('SubmissionService', () => {
         status: SubmissionStatus.REJECTED,
         reason: SubmissionRejectionReason.MissingRequiredKeyword,
       });
-      validationService.validateSubmissions.mockResolvedValueOnce([
-        {
-          submission: firstPendingSubmission,
-          rejectionReason: null,
-        },
-      ]);
-      validationService.validateSubmissions.mockResolvedValueOnce([
-        {
-          submission: secondPendingSubmission,
-          rejectionReason: null,
-        },
-      ]);
+      validationService.validatePromotionSubmission.mockResolvedValueOnce({
+        submission: firstPendingSubmission,
+        rejectionReason: null,
+      });
+      validationService.validatePromotionSubmission.mockResolvedValueOnce({
+        submission: secondPendingSubmission,
+        rejectionReason: null,
+      });
 
       await expect(
         submissionService.processSubmissions(
@@ -208,14 +205,18 @@ describe('SubmissionService', () => {
         },
       ]);
 
-      expect(validationService.validateSubmissions).toHaveBeenNthCalledWith(
+      expect(
+        validationService.validatePromotionSubmission,
+      ).toHaveBeenNthCalledWith(
         1,
-        [firstPendingSubmission],
+        firstPendingSubmission,
         manifest,
       );
-      expect(validationService.validateSubmissions).toHaveBeenNthCalledWith(
+      expect(
+        validationService.validatePromotionSubmission,
+      ).toHaveBeenNthCalledWith(
         2,
-        [secondPendingSubmission],
+        secondPendingSubmission,
         manifest,
       );
       expect(submissionRepository.updateOne).toHaveBeenCalledWith(
@@ -234,6 +235,67 @@ describe('SubmissionService', () => {
       );
     });
 
+    it('marks only the failed promotion submission as failed and continues processing', async () => {
+      const manifest = generateManifest();
+      const failedSubmission = generateSubmission({
+        id: 1,
+        status: SubmissionStatus.PENDING,
+      });
+      const acceptedSubmission = generateSubmission({
+        id: 2,
+        status: SubmissionStatus.PENDING,
+      });
+      const error = new Error('Grok request failed');
+
+      validationService.validatePromotionSubmission.mockRejectedValueOnce(error);
+      validationService.validatePromotionSubmission.mockResolvedValueOnce({
+        submission: acceptedSubmission,
+        rejectionReason: null,
+      });
+
+      await expect(
+        submissionService.processSubmissions(
+          [failedSubmission, acceptedSubmission],
+          manifest,
+        ),
+      ).resolves.toEqual([
+        {
+          workerAddress: acceptedSubmission.workerAddress,
+          solution: acceptedSubmission.solution,
+          verificationResult: VerificationResult.ACCEPTED,
+        },
+      ]);
+
+      expect(
+        validationService.validatePromotionSubmission,
+      ).toHaveBeenNthCalledWith(
+        1,
+        failedSubmission,
+        manifest,
+      );
+      expect(
+        validationService.validatePromotionSubmission,
+      ).toHaveBeenNthCalledWith(
+        2,
+        acceptedSubmission,
+        manifest,
+      );
+      expect(submissionRepository.updateOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: failedSubmission.id,
+          status: SubmissionStatus.FAILED,
+          reason: error.message,
+        }),
+      );
+      expect(submissionRepository.updateOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: acceptedSubmission.id,
+          status: SubmissionStatus.ACCEPTED,
+          reason: null,
+        }),
+      );
+    });
+
     it('uses the same validation entrypoint for engagement submissions', async () => {
       const manifest = generateManifest({
         requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
@@ -246,7 +308,7 @@ describe('SubmissionService', () => {
         generateSubmission({ solution: 'alice' }),
         generateSubmission({ solution: 'bob' }),
       ];
-      validationService.validateSubmissions.mockResolvedValue(
+      validationService.validateEngagementSubmissions.mockResolvedValue(
         submissions.map((submission) => ({
           submission,
           rejectionReason: null,
@@ -263,7 +325,7 @@ describe('SubmissionService', () => {
         })),
       );
 
-      expect(validationService.validateSubmissions).toHaveBeenCalledWith(
+      expect(validationService.validateEngagementSubmissions).toHaveBeenCalledWith(
         submissions,
         manifest,
       );

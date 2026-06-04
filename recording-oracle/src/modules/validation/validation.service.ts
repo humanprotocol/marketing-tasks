@@ -1,12 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
+import { SubmissionRejectionReason } from '../../common/constants/errors';
 import {
-  ErrorJob,
-  SubmissionRejectionReason,
-} from '../../common/constants/errors';
-import { JobRequestType } from '../../common/enums/job';
-import { ValidationError } from '../../common/errors';
-import { IManifest } from '../../common/interfaces/job';
+  ISocialMediaEngagementManifest,
+  ISocialMediaPromotionManifest,
+} from '../../common/interfaces/job';
 import type { SubmissionEntity } from '../submission/submission.entity';
 import { GrokService } from './grok/grok.service';
 import { XApiService } from './x-api/x-api.service';
@@ -23,17 +21,17 @@ export class ValidationService {
     private readonly xApiService: XApiService,
   ) {}
 
-  async validateSubmissions(
+  validatePromotionSubmission(
+    submission: SubmissionEntity,
+    manifest: ISocialMediaPromotionManifest,
+  ): Promise<SubmissionValidationResult> {
+    return this.grokService.validateSubmission(submission, manifest);
+  }
+
+  validateEngagementSubmissions(
     submissions: SubmissionEntity[],
-    manifest: IManifest,
+    manifest: ISocialMediaEngagementManifest,
   ): Promise<SubmissionValidationResult[]> {
-    switch (manifest.requestType) {
-      case JobRequestType.SOCIAL_MEDIA_PROMOTION:
-        return this.grokService.validateSubmissions(submissions, manifest);
-      case JobRequestType.SOCIAL_MEDIA_ENGAGEMENT:
-        return this.xApiService.validateSubmissions(submissions, manifest);
-      default:
-        throw new ValidationError(ErrorJob.InvalidJobType);
-    }
+    return this.xApiService.validateSubmissions(submissions, manifest);
   }
 }
