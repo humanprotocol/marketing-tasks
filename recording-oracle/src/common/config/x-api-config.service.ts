@@ -5,20 +5,20 @@ import { ConfigService } from '@nestjs/config';
 export class XApiConfigService {
   constructor(private readonly configService: ConfigService) {}
 
-  get consumerKey(): string {
-    return this.configService.getOrThrow<string>('X_CONSUMER_KEY');
+  get consumerKey(): string | undefined {
+    return this.configService.get<string>('X_CONSUMER_KEY');
   }
 
-  get consumerSecret(): string {
-    return this.configService.getOrThrow<string>('X_CONSUMER_SECRET');
+  get consumerSecret(): string | undefined {
+    return this.configService.get<string>('X_CONSUMER_SECRET');
   }
 
-  get accessToken(): string {
-    return this.configService.getOrThrow<string>('X_ACCESS_TOKEN');
+  get accessToken(): string | undefined {
+    return this.configService.get<string>('X_ACCESS_TOKEN');
   }
 
-  get accessTokenSecret(): string {
-    return this.configService.getOrThrow<string>('X_ACCESS_TOKEN_SECRET');
+  get accessTokenSecret(): string | undefined {
+    return this.configService.get<string>('X_ACCESS_TOKEN_SECRET');
   }
 
   get baseUrl(): string {

@@ -131,6 +131,17 @@ describe('XApiService', () => {
     );
   });
 
+  it('fails engagement X API calls clearly when OAuth config is missing', async () => {
+    xApiConfigService.consumerKey = undefined;
+
+    await expect(
+      service.getLikingUsernames('123', new Set(['alice'])),
+    ).rejects.toThrow(
+      'X API config is required to process social_media_engagement jobs',
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('validates engagement submissions and checks comments only for users that passed previous checks', async () => {
     const targetPostUrl = 'https://x.com/human/status/123';
     const manifest = generateManifest({

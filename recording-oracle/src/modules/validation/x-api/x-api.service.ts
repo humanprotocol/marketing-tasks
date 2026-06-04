@@ -21,6 +21,13 @@ type EngagementMatches = {
   commentingUsernames: Set<string>;
 };
 
+type XApiCredentials = {
+  consumerKey: string;
+  consumerSecret: string;
+  accessToken: string;
+  accessTokenSecret: string;
+};
+
 @Injectable()
 export class XApiService {
   constructor(private readonly xApiConfigService: XApiConfigService) {}
@@ -411,12 +418,13 @@ export class XApiService {
   }
 
   private getOAuthAuthorizationHeader(method: string, url: URL): string {
+    const credentials = this.getOAuthCredentials();
     const oauthParams: Record<string, string> = {
-      oauth_consumer_key: this.xApiConfigService.consumerKey,
+      oauth_consumer_key: credentials.consumerKey,
       oauth_nonce: randomBytes(16).toString('hex'),
       oauth_signature_method: 'HMAC-SHA1',
       oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
-      oauth_token: this.xApiConfigService.accessToken,
+      oauth_token: credentials.accessToken,
       oauth_version: '1.0',
     };
 
@@ -424,6 +432,7 @@ export class XApiService {
       method,
       url,
       oauthParams,
+      credentials,
     );
 
     return `OAuth ${Object.entries(oauthParams)
@@ -439,6 +448,7 @@ export class XApiService {
     method: string,
     url: URL,
     oauthParams: Record<string, string>,
+    credentials: XApiCredentials,
   ): string {
     const allParams: Array<[string, string]> = [];
 
@@ -471,12 +481,34 @@ export class XApiService {
       this.percentEncode(parameterString),
     ].join('&');
     const signingKey = `${this.percentEncode(
-      this.xApiConfigService.consumerSecret,
-    )}&${this.percentEncode(this.xApiConfigService.accessTokenSecret)}`;
+      credentials.consumerSecret,
+    )}&${this.percentEncode(credentials.accessTokenSecret)}`;
 
     return createHmac('sha1', signingKey)
       .update(signatureBaseString)
       .digest('base64');
+  }
+
+  private getOAuthCredentials(): XApiCredentials {
+    const {
+      consumerKey,
+      consumerSecret,
+      accessToken,
+      accessTokenSecret,
+    } = this.xApiConfigService;
+
+    if (!consumerKey || !consumerSecret || !accessToken || !accessTokenSecret) {
+      throw new ServerError(
+        'X API config is required to process social_media_engagement jobs',
+      );
+    }
+
+    return {
+      consumerKey,
+      consumerSecret,
+      accessToken,
+      accessTokenSecret,
+    };
   }
 
   private percentEncode(value: string): string {
