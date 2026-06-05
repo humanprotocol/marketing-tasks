@@ -75,14 +75,14 @@ describe('JobController', () => {
       it('should call jobService.solveJob', async () => {
         const solveJobDto: SolveJobDto = {
           assignmentId: '1',
-          postUrl: 'https://x.com/test/status/123',
+          solution: 'https://x.com/test/status/123',
         };
 
         await jobController.solveJob(solveJobDto);
 
         expect(jobService.solveJob).toHaveBeenCalledWith(
           Number(solveJobDto.assignmentId),
-          solveJobDto.postUrl,
+          solveJobDto.solution,
         );
       });
     });

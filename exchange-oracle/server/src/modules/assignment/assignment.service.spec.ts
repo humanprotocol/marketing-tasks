@@ -167,6 +167,46 @@ describe('AssignmentService', () => {
         );
       });
 
+      it('should not require live duration for social media engagement jobs', async () => {
+        const engagementManifest = createManifest({
+          requestType: JobType.SOCIAL_MEDIA_ENGAGEMENT,
+          endDate: new Date(Date.now() + 30 * 60 * 1000).getTime(),
+          requirements: {
+            targetPostUrl: 'https://x.com/test/status/123',
+            checkLike: true,
+          },
+        });
+
+        jest
+          .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
+          .mockResolvedValue({
+            id: 1,
+            manifestUrl: MOCK_MANIFEST_URL,
+            reputationNetwork: reputationNetwork,
+            status: JobStatus.ACTIVE,
+          } as any);
+        jest
+          .spyOn(assignmentRepository, 'findOneByJobIdAndWorker')
+          .mockResolvedValue(null);
+        jest.spyOn(assignmentRepository, 'countByJobId').mockResolvedValue(0);
+        jest
+          .spyOn(jobService, 'getManifest')
+          .mockResolvedValue(engagementManifest);
+        jest.spyOn(jobService, 'getRewardAmount').mockResolvedValue(20);
+        (Escrow__factory.connect as any).mockImplementation(() => ({
+          duration: jest
+            .fn()
+            .mockResolvedValue((new Date().getTime() + 1000) / 1000),
+        }));
+
+        await expect(
+          assignmentService.createAssignment(createAssignmentDto, {
+            address: workerAddress,
+            reputationNetwork: reputationNetwork,
+          } as any),
+        ).resolves.toBeUndefined();
+      });
+
       it('should reassign user who has previously canceled', async () => {
         jest
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
@@ -406,6 +446,7 @@ describe('AssignmentService', () => {
           chainId: 1,
           escrowAddress,
           manifestUrl: MOCK_MANIFEST_URL,
+          jobType: JobType.SOCIAL_MEDIA_PROMOTION,
           rewardToken: 'HMT',
         },
         status: AssignmentStatus.ACTIVE,
@@ -462,11 +503,6 @@ describe('AssignmentService', () => {
           expiresAt: expect.any(String),
           updatedAt: expect.any(String),
         } as AssignmentDto);
-        expect(jobService.getManifest).toHaveBeenCalledWith(
-          chainId,
-          escrowAddress,
-          MOCK_MANIFEST_URL,
-        );
         expect(assignmentRepository.fetchFiltered).toHaveBeenCalledWith({
           page: 0,
           pageSize: 10,

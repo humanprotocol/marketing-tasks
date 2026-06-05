@@ -88,7 +88,7 @@ describe('WebhookService', () => {
       eventType: EventType.SUBMISSION_IN_REVIEW,
       eventData: {
         assigneeId: MOCK_ADDRESS,
-        postUrl: 'https://x.com/test/status/1',
+        solution: 'https://x.com/test/status/1',
       },
     };
 
@@ -115,7 +115,7 @@ describe('WebhookService', () => {
             event_type: webhookDto.eventType,
             event_data: {
               assignee_id: MOCK_ADDRESS,
-              post_url: 'https://x.com/test/status/1',
+              solution: 'https://x.com/test/status/1',
             },
           },
           { headers: { [HEADER_SIGNATURE_KEY]: expect.any(String) } },

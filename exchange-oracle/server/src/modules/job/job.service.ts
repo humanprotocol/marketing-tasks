@@ -26,7 +26,12 @@ import {
   JobType,
 } from '../../common/enums/job';
 import { EventType } from '../../common/enums/webhook';
-import { ConflictError, NotFoundError, ServerError } from '../../common/errors';
+import {
+  ConflictError,
+  NotFoundError,
+  ServerError,
+  ValidationError,
+} from '../../common/errors';
 import { PageDto } from '../../common/pagination/pagination.dto';
 import { formatAxiosError } from '../../common/utils/http';
 import { downloadFileFromUrl } from '../../common/utils/storage';
@@ -72,9 +77,22 @@ export class JobService {
       signer,
     );
 
+    const manifestUrl = await escrowClient.getManifest(escrowAddress);
+    const manifest = await this.getManifest(
+      chainId,
+      escrowAddress,
+      manifestUrl,
+    );
+    const jobType = manifest.requestType;
+
+    if (!jobType || !Object.values(JobType).includes(jobType)) {
+      throw new ValidationError(ErrorJob.InvalidJobType);
+    }
+
     const newJobEntity = new JobEntity();
     newJobEntity.escrowAddress = escrowAddress;
-    newJobEntity.manifestUrl = await escrowClient.getManifest(escrowAddress);
+    newJobEntity.manifestUrl = manifestUrl;
+    newJobEntity.jobType = jobType;
     newJobEntity.chainId = chainId;
     newJobEntity.rewardToken = await tokenContract.symbol();
     newJobEntity.status = JobStatus.ACTIVE;
@@ -136,9 +154,6 @@ export class JobService {
     data: GetJobsDto,
     reputationNetwork: string,
   ): Promise<PageDto<JobDto>> {
-    if (data.jobType && data.jobType !== JobType.SOCIAL_MEDIA_PROMOTION)
-      return new PageDto(data.page!, data.pageSize!, 0, []);
-
     const { entities, itemCount } = await this.jobRepository.fetchFiltered({
       ...data,
       pageSize: data.pageSize!,
@@ -150,7 +165,7 @@ export class JobService {
         const job = new JobDto(
           entity.escrowAddress,
           entity.chainId,
-          JobType.SOCIAL_MEDIA_PROMOTION,
+          entity.jobType,
           entity.status,
         );
 
@@ -214,7 +229,7 @@ export class JobService {
     return new PageDto(data.page!, data.pageSize!, itemCount, jobs);
   }
 
-  public async solveJob(assignmentId: number, postUrl: string): Promise<void> {
+  public async solveJob(assignmentId: number, solution: string): Promise<void> {
     const assignment =
       await this.assignmentRepository.findOneById(assignmentId);
     if (!assignment) {
@@ -234,7 +249,7 @@ export class JobService {
         eventType: EventType.SUBMISSION_IN_REVIEW,
         eventData: {
           assigneeId: assignment.workerAddress,
-          postUrl: postUrl,
+          solution,
         },
       });
     } catch (error) {

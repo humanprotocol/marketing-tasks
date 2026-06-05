@@ -25,14 +25,14 @@ export class SubmissionRepository extends BaseRepository<SubmissionEntity> {
     });
   }
 
-  findOneByJobIdAndPostUrl(
+  findOneByJobIdAndSolution(
     jobId: number,
-    postUrl: string,
+    solution: string,
   ): Promise<SubmissionEntity | null> {
     return this.findOne({
       where: {
         jobId,
-        postUrl,
+        solution,
       },
     });
   }

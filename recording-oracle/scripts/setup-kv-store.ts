@@ -6,7 +6,7 @@ import * as Minio from 'minio';
 
 const isLocalEnv = process.env.LOCAL === 'true';
 const envFilePath = isLocalEnv ? '.env.local' : '.env';
-const supportedJobTypes = 'social_media_promotion';
+const supportedJobTypes = 'social_media_promotion,social_media_engagement';
 
 dotenv.config({ path: envFilePath });
 

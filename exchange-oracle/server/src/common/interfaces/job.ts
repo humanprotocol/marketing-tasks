@@ -1,3 +1,5 @@
+import { JobType } from '../enums/job';
+
 export type AbuseProbability = 'low' | 'medium' | 'high';
 
 export interface ManifestCampaign {
@@ -5,7 +7,7 @@ export interface ManifestCampaign {
   description: string;
 }
 
-export interface ManifestRequirements {
+export interface SocialMediaPromotionRequirements {
   requiredHashtags?: string[];
   requiredKeywords?: string[];
   requiredLink?: string;
@@ -19,17 +21,40 @@ export interface ManifestRequirements {
   minReposts?: number;
 }
 
+export interface SocialMediaEngagementRequirements {
+  targetPostUrl: string;
+  checkLike?: boolean;
+  checkRepost?: boolean;
+  checkQuote?: boolean;
+  checkComment?: boolean;
+}
+
+export type ManifestRequirements =
+  | SocialMediaPromotionRequirements
+  | SocialMediaEngagementRequirements;
+
 export interface ManifestAiValidation {
   allowedAbuseProbability: AbuseProbability;
 }
 
-export interface Manifest {
-  jobType: string;
+interface BaseManifest {
+  requestType: JobType;
   platforms: string[];
   campaign: ManifestCampaign;
   endDate: number;
   submissionsRequired: number;
-  requirements: ManifestRequirements;
-  aiValidation: ManifestAiValidation;
   qualifications?: string[];
 }
+
+export interface SocialMediaPromotionManifest extends BaseManifest {
+  requirements: SocialMediaPromotionRequirements;
+  aiValidation?: ManifestAiValidation;
+}
+
+export interface SocialMediaEngagementManifest extends BaseManifest {
+  requirements: SocialMediaEngagementRequirements;
+}
+
+export type Manifest =
+  | SocialMediaPromotionManifest
+  | SocialMediaEngagementManifest;

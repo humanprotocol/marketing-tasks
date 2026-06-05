@@ -146,13 +146,44 @@ describe('JobService', () => {
         jest
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue(null);
+        const getManifestSpy = jest
+          .spyOn(jobService, 'getManifest')
+          .mockResolvedValue(createManifest());
 
         await jobService.createJob(webhook);
+        getManifestSpy.mockRestore();
 
         expect(jobRepository.createUnique).toHaveBeenCalledWith({
           chainId,
           escrowAddress,
           manifestUrl: MOCK_MANIFEST_URL,
+          jobType: JobType.SOCIAL_MEDIA_PROMOTION,
+          reputationNetwork,
+          rewardToken: 'HMT',
+          status: JobStatus.ACTIVE,
+        });
+      });
+
+      it('should create a new job using requestType from the manifest', async () => {
+        jest
+          .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
+          .mockResolvedValue(null);
+        const getManifestSpy = jest
+          .spyOn(jobService, 'getManifest')
+          .mockResolvedValue(
+            createManifest({
+              requestType: JobType.SOCIAL_MEDIA_ENGAGEMENT,
+            }),
+          );
+
+        await jobService.createJob(webhook);
+        getManifestSpy.mockRestore();
+
+        expect(jobRepository.createUnique).toHaveBeenCalledWith({
+          chainId,
+          escrowAddress,
+          manifestUrl: MOCK_MANIFEST_URL,
+          jobType: JobType.SOCIAL_MEDIA_ENGAGEMENT,
           reputationNetwork,
           rewardToken: 'HMT',
           status: JobStatus.ACTIVE,
@@ -338,6 +369,7 @@ describe('JobService', () => {
         chainId: 1,
         escrowAddress,
         manifestUrl: MOCK_MANIFEST_URL,
+        jobType: JobType.SOCIAL_MEDIA_PROMOTION,
         status: JobStatus.ACTIVE,
         createdAt: new Date(),
       },
@@ -463,6 +495,34 @@ describe('JobService', () => {
           status: JobStatus.ACTIVE,
         });
       });
+
+      it('should return engagement jobs with their persisted job type', async () => {
+        jest.spyOn(jobRepository, 'fetchFiltered').mockResolvedValueOnce({
+          entities: [
+            {
+              ...jobs[0],
+              jobType: JobType.SOCIAL_MEDIA_ENGAGEMENT,
+            },
+          ] as any,
+          itemCount: 1,
+        });
+
+        const result = await jobService.getJobList(
+          {
+            chainId,
+            jobType: JobType.SOCIAL_MEDIA_ENGAGEMENT,
+            fields: [],
+            escrowAddress,
+            status: JobStatus.ACTIVE,
+            page: 0,
+            pageSize: 10,
+            skip: 0,
+          },
+          workerAddress,
+        );
+
+        expect(result.results[0].jobType).toBe(JobType.SOCIAL_MEDIA_ENGAGEMENT);
+      });
     });
   });
 
@@ -500,7 +560,7 @@ describe('JobService', () => {
           eventType: EventType.SUBMISSION_IN_REVIEW,
           eventData: {
             assigneeId: workerAddress,
-            postUrl: 'https://x.com/test/status/1',
+            solution: 'https://x.com/test/status/1',
           },
         });
         expect(assignmentRepository.updateOne).toHaveBeenCalledWith(

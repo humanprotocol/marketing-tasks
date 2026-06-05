@@ -12,10 +12,16 @@ import {
 } from './grok.utils';
 import { generateGrokResponse } from './fixtures';
 import { GrokService } from './grok.service';
+import { ISocialMediaPromotionManifest } from '../../../common/interfaces/job';
 
 describe('GrokService', () => {
   let grokService: GrokService;
   let fetchMock: jest.Mock;
+  let grokConfigService: {
+    apiKey?: string;
+    baseUrl: string;
+    model: string;
+  };
 
   const baseUrl = 'https://api.x.ai/v1';
   const apiKey = faker.string.alphanumeric(32);
@@ -39,17 +45,18 @@ describe('GrokService', () => {
   beforeEach(async () => {
     fetchMock = jest.fn();
     global.fetch = fetchMock;
+    grokConfigService = {
+      apiKey,
+      baseUrl,
+      model,
+    };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
         GrokService,
         {
           provide: GrokConfigService,
-          useValue: {
-            apiKey,
-            baseUrl,
-            model,
-          },
+          useValue: grokConfigService,
         },
       ],
     }).compile();
@@ -77,7 +84,10 @@ describe('GrokService', () => {
         });
 
         await expect(
-          grokService.validatePost(postUrl, manifest),
+          grokService.validatePost(
+            postUrl,
+            manifest as ISocialMediaPromotionManifest,
+          ),
         ).resolves.toEqual(
           expect.objectContaining({
             postExists: true,
@@ -161,7 +171,10 @@ describe('GrokService', () => {
         });
 
         await expect(
-          grokService.validatePost(faker.internet.url(), manifest),
+          grokService.validatePost(
+            faker.internet.url(),
+            manifest as ISocialMediaPromotionManifest,
+          ),
         ).resolves.toEqual(validationResult);
       });
 
@@ -172,7 +185,10 @@ describe('GrokService', () => {
         });
 
         await expect(
-          grokService.validatePost(faker.internet.url(), generateManifest()),
+          grokService.validatePost(
+            faker.internet.url(),
+            generateManifest() as ISocialMediaPromotionManifest,
+          ),
         ).resolves.toBeNull();
       });
 
@@ -183,7 +199,10 @@ describe('GrokService', () => {
         });
 
         await expect(
-          grokService.validatePost(faker.internet.url(), generateManifest()),
+          grokService.validatePost(
+            faker.internet.url(),
+            generateManifest() as ISocialMediaPromotionManifest,
+          ),
         ).resolves.toBeNull();
       });
     });
@@ -203,7 +222,10 @@ describe('GrokService', () => {
         });
 
         await expect(
-          grokService.validatePost(faker.internet.url(), generateManifest()),
+          grokService.validatePost(
+            faker.internet.url(),
+            generateManifest() as ISocialMediaPromotionManifest,
+          ),
         ).rejects.toThrow(errorMessage);
       });
 
@@ -215,7 +237,10 @@ describe('GrokService', () => {
         });
 
         await expect(
-          grokService.validatePost(faker.internet.url(), generateManifest()),
+          grokService.validatePost(
+            faker.internet.url(),
+            generateManifest() as ISocialMediaPromotionManifest,
+          ),
         ).rejects.toThrow('Grok API request failed with HTTP 500');
       });
 
@@ -227,8 +252,25 @@ describe('GrokService', () => {
         });
 
         await expect(
-          grokService.validatePost(faker.internet.url(), generateManifest()),
+          grokService.validatePost(
+            faker.internet.url(),
+            generateManifest() as ISocialMediaPromotionManifest,
+          ),
         ).rejects.toBeInstanceOf(ServerError);
+      });
+
+      it('fails promotion Grok calls clearly when API key config is missing', async () => {
+        grokConfigService.apiKey = undefined;
+
+        await expect(
+          grokService.validatePost(
+            faker.internet.url(),
+            generateManifest() as ISocialMediaPromotionManifest,
+          ),
+        ).rejects.toThrow(
+          'Grok config is required to process social_media_promotion jobs',
+        );
+        expect(fetchMock).not.toHaveBeenCalled();
       });
     });
   });

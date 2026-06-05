@@ -191,12 +191,12 @@ describe('JobService', () => {
     const results: IRecordingResult[] = [
       generateRecordingResult({
         workerAddress: faker.finance.ethereumAddress(),
-        postUrl: faker.internet.url(),
+        solution: faker.internet.url(),
         verificationResult: VerificationResult.ACCEPTED,
       }),
       generateRecordingResult({
         workerAddress: faker.finance.ethereumAddress(),
-        postUrl: faker.internet.url(),
+        solution: faker.internet.url(),
         verificationResult: VerificationResult.REJECTED,
       }),
     ];
@@ -346,6 +346,49 @@ describe('JobService', () => {
           }),
         );
       });
+
+      it('validates social media engagement manifests', async () => {
+        const manifest = generateManifest({
+          requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+          requirements: {
+            targetPostUrl: 'https://x.com/test/status/123',
+            checkLike: true,
+            checkRepost: true,
+            checkComment: true,
+          },
+        });
+        storageService.download.mockResolvedValue(manifest);
+
+        await expect(
+          jobService.getManifest(faker.internet.url()),
+        ).resolves.toEqual(
+          expect.objectContaining({
+            requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+          }),
+        );
+      });
+
+      it('validates quote-only social media engagement manifests', async () => {
+        const manifest = generateManifest({
+          requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+          requirements: {
+            targetPostUrl: 'https://x.com/test/status/123',
+            checkLike: false,
+            checkRepost: false,
+            checkQuote: true,
+            checkComment: false,
+          },
+        });
+        storageService.download.mockResolvedValue(manifest);
+
+        await expect(
+          jobService.getManifest(faker.internet.url()),
+        ).resolves.toEqual(
+          expect.objectContaining({
+            requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+          }),
+        );
+      });
     });
 
     describe('fail', () => {
@@ -354,6 +397,24 @@ describe('JobService', () => {
           ...generateManifest(),
           submissionsRequired: 0,
         });
+
+        await expect(
+          jobService.getManifest(faker.internet.url()),
+        ).rejects.toBeInstanceOf(ValidationError);
+      });
+
+      it('rejects engagement manifests that only require comments', async () => {
+        storageService.download.mockResolvedValue(
+          generateManifest({
+            requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+            requirements: {
+              targetPostUrl: 'https://x.com/test/status/123',
+              checkLike: false,
+              checkRepost: false,
+              checkComment: true,
+            },
+          }),
+        );
 
         await expect(
           jobService.getManifest(faker.internet.url()),

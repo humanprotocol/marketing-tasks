@@ -5,8 +5,8 @@ import { ConfigService } from '@nestjs/config';
 export class GrokConfigService {
   constructor(private readonly configService: ConfigService) {}
 
-  get apiKey(): string {
-    return this.configService.getOrThrow<string>('GROK_API_KEY');
+  get apiKey(): string | undefined {
+    return this.configService.get<string>('GROK_API_KEY');
   }
 
   get baseUrl(): string {

@@ -1,6 +1,6 @@
 import {
-  IManifest,
   IPostValidationResult,
+  ISocialMediaPromotionManifest,
 } from '../../../common/interfaces/job';
 
 import { GrokResponsesApiResponse } from './grok.interface';
@@ -69,7 +69,7 @@ export function extractResponsesText(
 
 export function normalizeValidationResult(
   validation: IPostValidationResult,
-  manifest: IManifest,
+  manifest: ISocialMediaPromotionManifest,
 ): IPostValidationResult {
   const requirements = manifest.requirements;
 
@@ -97,7 +97,7 @@ export function normalizeValidationResult(
 
 export function buildGrokValidationPrompt(
   postUrl: string,
-  manifest: IManifest,
+  manifest: ISocialMediaPromotionManifest,
 ): string {
   const requirements = manifest.requirements;
   const requiredHashtags = requirements.requiredHashtags ?? [];

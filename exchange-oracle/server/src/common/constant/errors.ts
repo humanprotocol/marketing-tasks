@@ -42,6 +42,7 @@ export enum ErrorJob {
   NotFound = 'Job not found',
   AlreadyCompleted = 'Job already completed',
   AlreadyCanceled = 'Job already canceled',
+  InvalidJobType = 'Invalid job type',
 }
 
 /**

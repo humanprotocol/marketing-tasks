@@ -1,10 +1,7 @@
 import { faker } from '@faker-js/faker';
 import { Test } from '@nestjs/testing';
 
-import {
-  SubmissionStatus,
-  VerificationResult,
-} from '../../common/enums/submission';
+import { VerificationResult } from '../../common/enums/submission';
 import { EventType } from '../../common/enums/webhook';
 import { IRecordingResult } from '../../common/interfaces/job';
 import { generateJob, generateManifest } from '../../modules/job/fixtures';
@@ -51,7 +48,7 @@ describe('CronJobService', () => {
         {
           provide: SubmissionService,
           useValue: {
-            processSubmission: jest.fn(),
+            processSubmissions: jest.fn(),
           },
         },
         {
@@ -126,33 +123,18 @@ describe('CronJobService', () => {
         ).not.toHaveBeenCalled();
       });
 
-      it('processes pending submissions, keeps existing results, stores results, and queues completion webhooks', async () => {
+      it('processes submissions, stores results, and queues completion webhooks', async () => {
         const manifest = generateManifest({ submissionsRequired: 3 });
         const pendingSubmission = generateSubmission();
-        const acceptedSubmission = generateSubmission({
-          status: SubmissionStatus.ACCEPTED,
-        });
-        const rejectedSubmission = generateSubmission({
-          status: SubmissionStatus.REJECTED,
-          reason: faker.lorem.sentence(),
-        });
-        const failedSubmission = generateSubmission({
-          status: SubmissionStatus.FAILED,
-        });
         const job = generateJob({
           chainId,
           escrowAddress,
           endDate: faker.date.past(),
-          submissions: [
-            pendingSubmission,
-            acceptedSubmission,
-            rejectedSubmission,
-            failedSubmission,
-          ],
+          submissions: [pendingSubmission],
         });
         const processedResult: IRecordingResult = {
           workerAddress: pendingSubmission.workerAddress,
-          postUrl: pendingSubmission.postUrl,
+          solution: pendingSubmission.solution,
           verificationResult: VerificationResult.ACCEPTED,
         };
 
@@ -160,31 +142,20 @@ describe('CronJobService', () => {
         cronJobRepository.createUnique.mockResolvedValue(generateCronJob());
         jobService.getJobsAfterSubmissionDeadline.mockResolvedValue([job]);
         jobService.getManifest.mockResolvedValue(manifest);
-        submissionService.processSubmission.mockResolvedValue(processedResult);
+        submissionService.processSubmissions.mockResolvedValue([
+          processedResult,
+        ]);
 
         await cronJobService.processJobsAfterSubmissionDeadline();
 
-        expect(submissionService.processSubmission).toHaveBeenCalledWith(
-          pendingSubmission,
+        expect(submissionService.processSubmissions).toHaveBeenCalledWith(
+          job.submissions,
           manifest,
         );
         expect(jobService.storeResults).toHaveBeenCalledWith(
           job,
           manifest.submissionsRequired,
-          [
-            processedResult,
-            {
-              workerAddress: acceptedSubmission.workerAddress,
-              postUrl: acceptedSubmission.postUrl,
-              verificationResult: VerificationResult.ACCEPTED,
-            },
-            {
-              workerAddress: rejectedSubmission.workerAddress,
-              postUrl: rejectedSubmission.postUrl,
-              verificationResult: VerificationResult.REJECTED,
-              rejectionReason: rejectedSubmission.reason,
-            },
-          ],
+          [processedResult],
         );
         expect(webhookService.createWebhook).toHaveBeenCalledWith(
           chainId,

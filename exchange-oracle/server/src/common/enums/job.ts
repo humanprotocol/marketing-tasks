@@ -39,4 +39,5 @@ export enum AssignmentSortField {
 
 export enum JobType {
   SOCIAL_MEDIA_PROMOTION = 'social_media_promotion',
+  SOCIAL_MEDIA_ENGAGEMENT = 'social_media_engagement',
 }

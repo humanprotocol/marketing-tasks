@@ -6,8 +6,30 @@ import type { ManifestDto } from '../../src/modules/job/job.dto';
 export function createManifest(
   overrides: Partial<ManifestDto> = {},
 ): ManifestDto {
+  const requestType = overrides.requestType ?? JobType.SOCIAL_MEDIA_PROMOTION;
+
+  if (requestType === JobType.SOCIAL_MEDIA_ENGAGEMENT) {
+    return {
+      requestType,
+      submissionsRequired: faker.number.int({ min: 1, max: 10 }),
+      endDate: faker.date
+        .soon({ days: 30, refDate: Date.now() + 14 * 24 * 60 * 60 * 1000 })
+        .getTime(),
+      platforms: ['x'],
+      campaign: {
+        name: faker.company.catchPhrase(),
+        description: faker.lorem.sentences({ min: 1, max: 2 }),
+      },
+      requirements: {
+        targetPostUrl: `https://x.com/${faker.internet.username()}/status/${faker.string.numeric(8)}`,
+        checkLike: true,
+      },
+      ...overrides,
+    } as ManifestDto;
+  }
+
   return {
-    jobType: JobType.SOCIAL_MEDIA_PROMOTION,
+    requestType,
     submissionsRequired: faker.number.int({ min: 1, max: 10 }),
     endDate: faker.date
       .soon({ days: 30, refDate: Date.now() + 14 * 24 * 60 * 60 * 1000 })
@@ -38,5 +60,5 @@ export function createManifest(
       ]),
     },
     ...overrides,
-  };
+  } as ManifestDto;
 }
