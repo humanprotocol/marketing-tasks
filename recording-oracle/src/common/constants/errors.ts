@@ -8,6 +8,7 @@ export enum ErrorJob {
   InvalidJobType = 'Manifest contains an invalid job type',
   SolutionAlreadyExists = 'Solution already exists',
   InvalidPostUrl = 'Post URL must be a valid x.com status URL',
+  InvalidXUsername = 'X username must be a valid handle',
 }
 
 /**
@@ -36,6 +37,12 @@ export enum SubmissionRejectionReason {
   MinLiveDurationNotMet = 'Minimum live duration not met',
   MinLikesNotMet = 'Minimum likes not met',
   MinRepostsNotMet = 'Minimum reposts not met',
+  InvalidXUsername = 'Invalid X username',
+  TargetPostNotFound = 'Target post not found',
+  MissingRequiredLike = 'Missing required like',
+  MissingRequiredRepost = 'Missing required repost',
+  MissingRequiredQuote = 'Missing required quote',
+  MissingRequiredComment = 'Missing required comment',
   AbuseProbabilityTooHigh = 'Abuse probability too high',
 }
 

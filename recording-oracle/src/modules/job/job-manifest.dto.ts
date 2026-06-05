@@ -18,65 +18,91 @@ import {
 import { ErrorJob } from '../../common/constants/errors';
 import { JobRequestType } from '../../common/enums/job';
 import { ValidationError } from '../../common/errors';
-import { AbuseProbability, IManifest } from '../../common/interfaces/job';
+import {
+  AbuseProbability,
+  IManifest,
+  ISocialMediaEngagementRequirements,
+} from '../../common/interfaces/job';
 
-class ManifestRequirementsDto {
+class SocialMediaPromotionRequirementsDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  required_hashtags?: string[];
+  requiredHashtags?: string[];
 
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  required_keywords?: string[];
+  requiredKeywords?: string[];
 
   @IsOptional()
   @IsString()
-  required_link?: string;
+  requiredLink?: string;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  min_length?: number;
+  minLength?: number;
 
   @IsOptional()
   @IsBoolean()
-  requires_media?: boolean;
+  requiresMedia?: boolean;
 
   @IsOptional()
   @IsBoolean()
-  must_be_public?: boolean;
+  mustBePublic?: boolean;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  min_live_duration_hours?: number;
+  minLiveDurationHours?: number;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  min_followers?: number;
+  minFollowers?: number;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  min_account_age_days?: number;
+  minAccountAgeDays?: number;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  min_likes?: number;
+  minLikes?: number;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  min_reposts?: number;
+  minReposts?: number;
+}
+
+class SocialMediaEngagementRequirementsDto {
+  @IsString()
+  @IsNotEmpty()
+  targetPostUrl!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  checkLike?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  checkRepost?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  checkQuote?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  checkComment?: boolean;
 }
 
 class ManifestAiValidationDto {
   @IsIn(['low', 'medium', 'high'])
-  allowed_abuse_probability!: AbuseProbability;
+  allowedAbuseProbability!: AbuseProbability;
 }
 
 class ManifestCampaignDto {
@@ -91,11 +117,11 @@ class ManifestCampaignDto {
 
 class ManifestDto {
   @IsEnum(JobRequestType)
-  job_type!: JobRequestType;
+  requestType!: JobRequestType;
 
   @IsNumber()
   @Min(0)
-  end_date!: number;
+  endDate!: number;
 
   @IsArray()
   @IsString({ each: true })
@@ -103,19 +129,26 @@ class ManifestDto {
 
   @IsInt()
   @Min(1)
-  submissions_required!: number;
+  submissionsRequired!: number;
 
   @ValidateNested()
   @Type(() => ManifestCampaignDto)
   campaign!: ManifestCampaignDto;
 
   @ValidateNested()
-  @Type(() => ManifestRequirementsDto)
-  requirements!: ManifestRequirementsDto;
+  @Type((options) =>
+    options?.object?.requestType === JobRequestType.SOCIAL_MEDIA_ENGAGEMENT
+      ? SocialMediaEngagementRequirementsDto
+      : SocialMediaPromotionRequirementsDto,
+  )
+  requirements!:
+    | SocialMediaPromotionRequirementsDto
+    | SocialMediaEngagementRequirementsDto;
 
   @ValidateNested()
+  @IsOptional()
   @Type(() => ManifestAiValidationDto)
-  ai_validation!: ManifestAiValidationDto;
+  aiValidation?: ManifestAiValidationDto;
 
   @IsOptional()
   @IsArray()
@@ -144,6 +177,44 @@ export function validateManifestDto(manifest: IManifest): IManifest {
       undefined,
       flattenValidationErrors(validationErrors),
     );
+  }
+
+  if (
+    validatedManifest.requestType === JobRequestType.SOCIAL_MEDIA_PROMOTION &&
+    !validatedManifest.aiValidation
+  ) {
+    throw new ValidationError(ErrorJob.InvalidManifest, undefined, [
+      'aiValidation must be provided for social_media_promotion',
+    ]);
+  }
+
+  if (
+    validatedManifest.requestType === JobRequestType.SOCIAL_MEDIA_ENGAGEMENT
+  ) {
+    const requirements =
+      validatedManifest.requirements as ISocialMediaEngagementRequirements;
+    const hasAnyEngagementCheck =
+      requirements.checkLike ||
+      requirements.checkRepost ||
+      requirements.checkQuote ||
+      requirements.checkComment;
+
+    if (!requirements.targetPostUrl || !hasAnyEngagementCheck) {
+      throw new ValidationError(ErrorJob.InvalidManifest, undefined, [
+        'targetPostUrl and at least one engagement check must be provided for social_media_engagement',
+      ]);
+    }
+
+    if (
+      requirements.checkComment &&
+      !requirements.checkLike &&
+      !requirements.checkRepost &&
+      !requirements.checkQuote
+    ) {
+      throw new ValidationError(ErrorJob.InvalidManifest, undefined, [
+        'checkComment requires checkLike, checkRepost, or checkQuote for social_media_engagement',
+      ]);
+    }
   }
 
   return validatedManifest as IManifest;

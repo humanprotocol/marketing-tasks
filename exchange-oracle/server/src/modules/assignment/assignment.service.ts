@@ -80,13 +80,17 @@ export class AssignmentService {
       jobEntity.manifestUrl,
     );
 
-    if (currentAssignments >= manifest.submissions_required) {
+    if (currentAssignments >= manifest.submissionsRequired) {
       throw new ValidationError(ErrorAssignment.FullyAssigned);
     }
 
-    const jobEndDate = new Date(manifest.end_date);
-    const requiredLiveDurationMs =
-      (manifest.requirements.min_live_duration_hours ?? 0) * 60 * 60 * 1000;
+    const jobEndDate = new Date(manifest.endDate);
+    const requiredLiveDurationHours =
+      manifest.requestType === JobType.SOCIAL_MEDIA_PROMOTION &&
+      'minLiveDurationHours' in manifest.requirements
+        ? (manifest.requirements.minLiveDurationHours ?? 0)
+        : 0;
+    const requiredLiveDurationMs = requiredLiveDurationHours * 60 * 60 * 1000;
     if (jobEndDate.getTime() - Date.now() < requiredLiveDurationMs) {
       throw new ValidationError(
         ErrorAssignment.InsufficientTimeForLiveDuration,
@@ -112,7 +116,7 @@ export class AssignmentService {
     const rewardAmount = await this.jobService.getRewardAmount(
       data.chainId,
       data.escrowAddress,
-      manifest.submissions_required,
+      manifest.submissionsRequired,
     );
 
     // Allow reassignation when status is Canceled
@@ -135,9 +139,6 @@ export class AssignmentService {
     workerAddress: string,
     reputationNetwork: string,
   ): Promise<PageDto<AssignmentDto>> {
-    if (data.jobType && data.jobType !== JobType.SOCIAL_MEDIA_PROMOTION)
-      return new PageDto(data.page!, data.pageSize!, 0, []);
-
     const { entities, itemCount } =
       await this.assignmentRepository.fetchFiltered({
         ...data,
@@ -152,7 +153,7 @@ export class AssignmentService {
           entity.id.toString(),
           entity.job.escrowAddress,
           entity.job.chainId,
-          JobType.SOCIAL_MEDIA_PROMOTION,
+          entity.job.jobType,
           entity.status,
           entity.rewardAmount,
           entity.job.rewardToken,

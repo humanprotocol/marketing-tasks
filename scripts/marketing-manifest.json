@@ -1,24 +1,24 @@
 {
-  "job_type": "social_media_promotion",
-  "submissions_required": 1,
-  "end_date": 1808326717000,
+  "requestType": "social_media_promotion",
+  "submissionsRequired": 1,
+  "endDate": 1808326717000,
   "platforms": ["x"],
   "campaign": {
     "name": "Marketing Local Test Campaign",
     "description": "Publish a public post on X promoting the local marketing stack and include the requested hashtags and link."
   },
   "requirements": {
-    "required_hashtags": ["#humanprotocol", "#socialmediaoracle"],
-    "required_keywords": ["marketing campaign", "recording oracle"],
-    "required_link": "https://humanprotocol.org",
-    "min_length": 80,
-    "requires_media": false,
-    "must_be_public": true,
-    "min_live_duration_hours": 24,
-    "min_followers": 0,
-    "min_account_age_days": 0
+    "requiredHashtags": ["#humanprotocol", "#socialmediaoracle"],
+    "requiredKeywords": ["marketing campaign", "recording oracle"],
+    "requiredLink": "https://humanprotocol.org",
+    "minLength": 80,
+    "requiresMedia": false,
+    "mustBePublic": true,
+    "minLiveDurationHours": 24,
+    "minFollowers": 0,
+    "minAccountAgeDays": 0
   },
-  "ai_validation": {
-    "allowed_abuse_probability": "medium"
+  "aiValidation": {
+    "allowedAbuseProbability": "medium"
   }
 }

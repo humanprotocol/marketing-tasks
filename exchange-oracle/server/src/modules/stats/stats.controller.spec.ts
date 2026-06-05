@@ -26,24 +26,30 @@ describe('statsController', () => {
   });
 
   describe('getOracleStats', () => {
-    it('should call statsService.getOracleStats', async () => {
-      const stats = new OracleStatsDto();
-      jest.spyOn(statsService, 'getOracleStats').mockResolvedValue(stats);
-      const result = await statsController.getOracleStats();
-      expect(result).toBe(stats);
-      expect(statsService.getOracleStats).toHaveBeenCalledWith();
+    describe('succeed', () => {
+      it('should call statsService.getOracleStats', async () => {
+        const stats = new OracleStatsDto();
+        jest.spyOn(statsService, 'getOracleStats').mockResolvedValue(stats);
+        const result = await statsController.getOracleStats();
+        expect(result).toBe(stats);
+        expect(statsService.getOracleStats).toHaveBeenCalledWith();
+      });
     });
   });
 
   describe('getAssignmentStats', () => {
-    it('should call statsService.getAssignmentStats', async () => {
-      const stats = new AssignmentStatsDto();
-      jest.spyOn(statsService, 'getAssignmentStats').mockResolvedValue(stats);
-      const result = await statsController.getAssignmentStats({
-        user: { address: userAddress },
-      } as RequestWithUser);
-      expect(result).toBe(stats);
-      expect(statsService.getAssignmentStats).toHaveBeenCalledWith(userAddress);
+    describe('succeed', () => {
+      it('should call statsService.getAssignmentStats', async () => {
+        const stats = new AssignmentStatsDto();
+        jest.spyOn(statsService, 'getAssignmentStats').mockResolvedValue(stats);
+        const result = await statsController.getAssignmentStats({
+          user: { address: userAddress },
+        } as RequestWithUser);
+        expect(result).toBe(stats);
+        expect(statsService.getAssignmentStats).toHaveBeenCalledWith(
+          userAddress,
+        );
+      });
     });
   });
 });

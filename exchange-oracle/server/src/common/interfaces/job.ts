@@ -1,3 +1,5 @@
+import { JobType } from '../enums/job';
+
 export type AbuseProbability = 'low' | 'medium' | 'high';
 
 export interface ManifestCampaign {
@@ -5,31 +7,54 @@ export interface ManifestCampaign {
   description: string;
 }
 
-export interface ManifestRequirements {
-  required_hashtags?: string[];
-  required_keywords?: string[];
-  required_link?: string;
-  min_length?: number;
-  requires_media?: boolean;
-  must_be_public?: boolean;
-  min_live_duration_hours?: number;
-  min_followers?: number;
-  min_account_age_days?: number;
-  min_likes?: number;
-  min_reposts?: number;
+export interface SocialMediaPromotionRequirements {
+  requiredHashtags?: string[];
+  requiredKeywords?: string[];
+  requiredLink?: string;
+  minLength?: number;
+  requiresMedia?: boolean;
+  mustBePublic?: boolean;
+  minLiveDurationHours?: number;
+  minFollowers?: number;
+  minAccountAgeDays?: number;
+  minLikes?: number;
+  minReposts?: number;
 }
+
+export interface SocialMediaEngagementRequirements {
+  targetPostUrl: string;
+  checkLike?: boolean;
+  checkRepost?: boolean;
+  checkQuote?: boolean;
+  checkComment?: boolean;
+}
+
+export type ManifestRequirements =
+  | SocialMediaPromotionRequirements
+  | SocialMediaEngagementRequirements;
 
 export interface ManifestAiValidation {
-  allowed_abuse_probability: AbuseProbability;
+  allowedAbuseProbability: AbuseProbability;
 }
 
-export interface Manifest {
-  job_type: string;
+interface BaseManifest {
+  requestType: JobType;
   platforms: string[];
   campaign: ManifestCampaign;
-  end_date: number;
-  submissions_required: number;
-  requirements: ManifestRequirements;
-  ai_validation: ManifestAiValidation;
+  endDate: number;
+  submissionsRequired: number;
   qualifications?: string[];
 }
+
+export interface SocialMediaPromotionManifest extends BaseManifest {
+  requirements: SocialMediaPromotionRequirements;
+  aiValidation?: ManifestAiValidation;
+}
+
+export interface SocialMediaEngagementManifest extends BaseManifest {
+  requirements: SocialMediaEngagementRequirements;
+}
+
+export type Manifest =
+  | SocialMediaPromotionManifest
+  | SocialMediaEngagementManifest;

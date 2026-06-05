@@ -7,6 +7,7 @@ import { Web3ConfigService } from './web3-config.service';
 import { NetworkConfigService } from './network-config.service';
 import { DatabaseConfigService } from './database-config.service';
 import { GrokConfigService } from './grok-config.service';
+import { XApiConfigService } from './x-api-config.service';
 
 @Global()
 @Module({
@@ -19,6 +20,7 @@ import { GrokConfigService } from './grok-config.service';
     NetworkConfigService,
     DatabaseConfigService,
     GrokConfigService,
+    XApiConfigService,
   ],
   exports: [
     ConfigService,
@@ -29,6 +31,7 @@ import { GrokConfigService } from './grok-config.service';
     NetworkConfigService,
     DatabaseConfigService,
     GrokConfigService,
+    XApiConfigService,
   ],
 })
 export class EnvConfigModule {}

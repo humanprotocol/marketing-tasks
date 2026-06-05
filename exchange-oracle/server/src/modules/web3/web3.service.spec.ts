@@ -42,42 +42,48 @@ describe('Web3Service', () => {
   });
 
   describe('getSigner', () => {
-    it('should return a signer for a configured chainId', () => {
-      const validChainId = ChainId.POLYGON_AMOY;
+    describe('succeed', () => {
+      it('should return a signer for a configured chainId', () => {
+        const validChainId = ChainId.POLYGON_AMOY;
 
-      const signer = web3Service.getSigner(validChainId);
-      expect(signer).toBeDefined();
+        const signer = web3Service.getSigner(validChainId);
+        expect(signer).toBeDefined();
+      });
     });
 
-    it('should throw invalid chain id provided for configured networks', () => {
-      const invalidChainId = ChainId.POLYGON;
+    describe('fail', () => {
+      it('should throw invalid chain id provided for configured networks', () => {
+        const invalidChainId = ChainId.POLYGON;
 
-      expect(() => web3Service.getSigner(invalidChainId)).toThrow(
-        ErrorWeb3.InvalidChainId,
-      );
+        expect(() => web3Service.getSigner(invalidChainId)).toThrow(
+          ErrorWeb3.InvalidChainId,
+        );
+      });
     });
   });
 
   describe('getValidChains', () => {
-    it('should get chainIds from configured networks', () => {
-      const validChainIds = web3Service.getValidChains();
-      expect(validChainIds).toEqual([ChainId.POLYGON_AMOY]);
-    });
+    describe('succeed', () => {
+      it('should get chainIds from configured networks', () => {
+        const validChainIds = web3Service.getValidChains();
+        expect(validChainIds).toEqual([ChainId.POLYGON_AMOY]);
+      });
 
-    it('should reflect network config changes', () => {
-      jest.spyOn(networkConfigService, 'networks', 'get').mockReturnValue([
-        {
-          chainId: ChainId.POLYGON,
-          rpcUrl: 'http://polygon-rpc.url',
-        },
-        {
-          chainId: ChainId.BSC_MAINNET,
-          rpcUrl: 'http://bsc-rpc.url',
-        },
-      ]);
+      it('should reflect network config changes', () => {
+        jest.spyOn(networkConfigService, 'networks', 'get').mockReturnValue([
+          {
+            chainId: ChainId.POLYGON,
+            rpcUrl: 'http://polygon-rpc.url',
+          },
+          {
+            chainId: ChainId.BSC_MAINNET,
+            rpcUrl: 'http://bsc-rpc.url',
+          },
+        ]);
 
-      const validChainIds = web3Service.getValidChains();
-      expect(validChainIds).toEqual([ChainId.POLYGON, ChainId.BSC_MAINNET]);
+        const validChainIds = web3Service.getValidChains();
+        expect(validChainIds).toEqual([ChainId.POLYGON, ChainId.BSC_MAINNET]);
+      });
     });
   });
 });

@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 
 import { EventType } from '../../common/enums/webhook';
-import { IRecordingResult } from '../../common/interfaces/job';
 import logger from '../../logger';
 import { JobService } from '../../modules/job/job.service';
 import { SubmissionService } from '../../modules/submission/submission.service';
@@ -11,7 +10,6 @@ import { WebhookService } from '../../modules/webhook/webhook.service';
 import { CronJobType } from './constants';
 import { CronJobEntity } from './cron-job.entity';
 import { CronJobRepository } from './cron-job.repository';
-import { SubmissionStatus } from '../../common/enums/submission';
 
 @Injectable()
 export class CronJobService {
@@ -71,24 +69,14 @@ export class CronJobService {
       for (const job of jobs) {
         try {
           const manifest = await this.jobService.getManifest(job.manifestUrl);
-          const existingResults: IRecordingResult[] = [];
-          const allResults = [...existingResults];
-
-          for (const submission of job.submissions ?? []) {
-            if (submission.status !== SubmissionStatus.PENDING) {
-              continue;
-            }
-
-            const result = await this.submissionService.processSubmission(
-              submission,
-              manifest,
-            );
-            allResults.push(result);
-          }
+          const allResults = await this.submissionService.processSubmissions(
+            job.submissions ?? [],
+            manifest,
+          );
 
           await this.jobService.storeResults(
             job,
-            manifest.submissions_required,
+            manifest.submissionsRequired,
             allResults,
           );
           await this.webhookService.createWebhook(

@@ -8,23 +8,24 @@ import {
   SubmissionStatus,
   VerificationResult,
 } from '../../common/enums/submission';
+import { JobRequestType } from '../../common/enums/job';
 import { ValidationError } from '../../common/errors';
 import {
   IManifest,
-  IPostValidationResult,
   IRecordingResult,
+  ISocialMediaEngagementManifest,
+  ISocialMediaPromotionManifest,
 } from '../../common/interfaces/job';
 import { JobService } from '../../modules/job/job.service';
-import { ValidationService } from '../validation/validation.service';
+import {
+  SubmissionValidationResult,
+  ValidationService,
+} from '../validation/validation.service';
 import {
   SubmissionEventData,
   WebhookDto,
 } from '../../modules/webhook/webhook.dto';
 
-import {
-  ABUSE_PRIORITY,
-  SUBMISSION_VALIDATION_RULES,
-} from './submission.constants';
 import { SubmissionEntity } from './submission.entity';
 import { SubmissionRepository } from './submission.repository';
 
@@ -45,11 +46,12 @@ export class SubmissionService {
       | SubmissionEventData
       | undefined;
 
-    if (submissionEventData?.assigneeId && submissionEventData?.postUrl) {
+    if (submissionEventData?.assigneeId && submissionEventData?.solution) {
       await this.saveSubmission(
         job.id,
+        job.jobType,
         submissionEventData.assigneeId,
-        submissionEventData.postUrl,
+        submissionEventData.solution,
       );
       return 'Submission received.';
     }
@@ -57,69 +59,77 @@ export class SubmissionService {
     throw new ValidationError(ErrorSubmission.MissingSubmissionData);
   }
 
-  async processSubmission(
-    submission: SubmissionEntity,
+  async processSubmissions(
+    submissions: SubmissionEntity[],
     manifest: IManifest,
-  ): Promise<IRecordingResult> {
-    try {
-      let finalResult: IRecordingResult;
+  ): Promise<IRecordingResult[]> {
+    const allResults: IRecordingResult[] = [];
+    const pendingSubmissions: SubmissionEntity[] = [];
 
-      const validation = await this.validationService.validatePost(
-        submission.postUrl,
-        manifest,
-      );
+    for (const submission of submissions) {
+      if (submission.status === SubmissionStatus.PENDING) {
+        pendingSubmissions.push(submission);
+        continue;
+      }
 
-      if (!validation) {
-        finalResult = {
-          workerAddress: submission.workerAddress,
-          postUrl: submission.postUrl,
-          verificationResult: VerificationResult.REJECTED,
-          rejectionReason: SubmissionRejectionReason.InvalidPostValidation,
-        };
-      } else {
-        const rejectionReason = this.getRejectionReason(validation, manifest);
+      const existingResult = this.getProcessedSubmissionResult(submission);
+      if (existingResult) {
+        allResults.push(existingResult);
+      }
+    }
 
-        if (rejectionReason) {
-          finalResult = {
-            workerAddress: submission.workerAddress,
-            postUrl: submission.postUrl,
-            verificationResult: VerificationResult.REJECTED,
-            rejectionReason,
-          };
-        } else {
-          finalResult = {
-            workerAddress: submission.workerAddress,
-            postUrl: submission.postUrl,
-            verificationResult: VerificationResult.ACCEPTED,
-          };
+    if (pendingSubmissions.length === 0) {
+      return allResults;
+    }
+
+    if (manifest.requestType === JobRequestType.SOCIAL_MEDIA_PROMOTION) {
+      for (const submission of pendingSubmissions) {
+        try {
+          const validationResult =
+            await this.validationService.validatePromotionSubmission(
+              submission,
+              manifest as ISocialMediaPromotionManifest,
+            );
+          allResults.push(await this.recordValidationResult(validationResult));
+        } catch (error) {
+          await this.handleFailedSubmission(submission, error);
         }
       }
 
-      submission.status =
-        finalResult.verificationResult === VerificationResult.ACCEPTED
-          ? SubmissionStatus.ACCEPTED
-          : SubmissionStatus.REJECTED;
-      submission.reason = finalResult.rejectionReason ?? null;
-      await this.submissionRepository.updateOne(submission);
+      return allResults;
+    }
 
-      return finalResult;
+    try {
+      const validationResults =
+        await this.validationService.validateEngagementSubmissions(
+          pendingSubmissions,
+          manifest as ISocialMediaEngagementManifest,
+        );
+
+      for (const validationResult of validationResults) {
+        allResults.push(await this.recordValidationResult(validationResult));
+      }
+
+      return allResults;
     } catch (error) {
-      submission.status = SubmissionStatus.FAILED;
-      submission.reason =
-        error instanceof Error
-          ? error.message
-          : ErrorSubmission.UnknownSubmissionError;
-      await this.submissionRepository.updateOne(submission);
+      for (const submission of pendingSubmissions) {
+        await this.handleFailedSubmission(submission, error);
+      }
+
       throw error;
     }
   }
 
   private async saveSubmission(
     jobId: number,
+    jobType: JobRequestType,
     workerAddress: string,
-    postUrl: string,
+    solution: string,
   ): Promise<void> {
-    const normalizedPostUrl = this.validatePostUrl(postUrl);
+    const normalizedSolution =
+      jobType === JobRequestType.SOCIAL_MEDIA_ENGAGEMENT
+        ? this.validateXUsername(solution)
+        : this.validatePostUrl(solution);
     const existingSubmission =
       await this.submissionRepository.findOneByJobIdAndWorkerAddress(
         jobId,
@@ -130,20 +140,20 @@ export class SubmissionService {
       throw new ValidationError(ErrorJob.SolutionAlreadyExists);
     }
 
-    const existingPostSubmission =
-      await this.submissionRepository.findOneByJobIdAndPostUrl(
+    const existingSolutionSubmission =
+      await this.submissionRepository.findOneByJobIdAndSolution(
         jobId,
-        normalizedPostUrl,
+        normalizedSolution,
       );
 
-    if (existingPostSubmission) {
+    if (existingSolutionSubmission) {
       throw new ValidationError(SubmissionRejectionReason.DuplicateSubmission);
     }
 
     const submission = new SubmissionEntity();
     submission.jobId = jobId;
     submission.workerAddress = workerAddress;
-    submission.postUrl = normalizedPostUrl;
+    submission.solution = normalizedSolution;
     submission.status = SubmissionStatus.PENDING;
     await this.submissionRepository.createUnique(submission);
   }
@@ -173,23 +183,69 @@ export class SubmissionService {
     return parsedUrl.toString();
   }
 
-  private getRejectionReason(
-    validation: IPostValidationResult,
-    manifest: IManifest,
-  ): SubmissionRejectionReason | null {
-    for (const rule of SUBMISSION_VALIDATION_RULES) {
-      if (!rule.isValid(validation, manifest)) {
-        return rule.rejectionReason;
-      }
+  private validateXUsername(username: string): string {
+    const normalizedUsername = username.trim().replace(/^@/, '').toLowerCase();
+    if (!/^[a-z0-9_]{1,15}$/.test(normalizedUsername)) {
+      throw new ValidationError(ErrorJob.InvalidXUsername);
     }
 
-    if (
-      ABUSE_PRIORITY[validation.overallBotProbability] >
-      ABUSE_PRIORITY[manifest.ai_validation.allowed_abuse_probability]
-    ) {
-      return SubmissionRejectionReason.AbuseProbabilityTooHigh;
-    }
+    return normalizedUsername;
+  }
 
-    return null;
+  private async recordValidationResult(
+    validationResult: SubmissionValidationResult,
+  ): Promise<IRecordingResult> {
+    const { submission, rejectionReason } = validationResult;
+    const verificationResult = rejectionReason
+      ? VerificationResult.REJECTED
+      : VerificationResult.ACCEPTED;
+
+    submission.status =
+      verificationResult === VerificationResult.ACCEPTED
+        ? SubmissionStatus.ACCEPTED
+        : SubmissionStatus.REJECTED;
+    submission.reason = rejectionReason;
+    await this.submissionRepository.updateOne(submission);
+
+    return {
+      workerAddress: submission.workerAddress,
+      solution: submission.solution,
+      verificationResult,
+      ...(rejectionReason ? { rejectionReason } : {}),
+    };
+  }
+
+  private async handleFailedSubmission(
+    submission: SubmissionEntity,
+    error: unknown,
+  ): Promise<void> {
+    submission.status = SubmissionStatus.FAILED;
+    submission.reason =
+      error instanceof Error
+        ? error.message
+        : ErrorSubmission.UnknownSubmissionError;
+    await this.submissionRepository.updateOne(submission);
+  }
+
+  private getProcessedSubmissionResult(
+    submission: SubmissionEntity,
+  ): IRecordingResult | null {
+    switch (submission.status) {
+      case SubmissionStatus.ACCEPTED:
+        return {
+          workerAddress: submission.workerAddress,
+          solution: submission.solution,
+          verificationResult: VerificationResult.ACCEPTED,
+        };
+      case SubmissionStatus.REJECTED:
+        return {
+          workerAddress: submission.workerAddress,
+          solution: submission.solution,
+          verificationResult: VerificationResult.REJECTED,
+          rejectionReason: submission.reason ?? undefined,
+        };
+      default:
+        return null;
+    }
   }
 }

@@ -44,16 +44,16 @@ export class JobService {
     const manifestUrl = await escrowClient.getManifest(escrowAddress);
     const manifest = await this.getManifest(manifestUrl);
 
-    if (manifest.job_type !== JobRequestType.SOCIAL_MEDIA_PROMOTION) {
+    if (!Object.values(JobRequestType).includes(manifest.requestType)) {
       throw new ValidationError(ErrorJob.InvalidJobType);
     }
 
     const job = new JobEntity();
     job.chainId = chainId;
     job.escrowAddress = escrowAddress;
-    job.jobType = manifest.job_type;
+    job.jobType = manifest.requestType;
     job.manifestUrl = manifestUrl;
-    job.endDate = new Date(manifest.end_date);
+    job.endDate = new Date(manifest.endDate);
 
     return await this.jobRepository.createUnique(job);
   }
@@ -95,9 +95,21 @@ export class JobService {
     const acceptedCount = allResults.filter(
       (result) => result.verificationResult === VerificationResult.ACCEPTED,
     ).length;
+    const recordingOracleFee =
+      (escrow.totalFundedAmount * BigInt(escrow.recordingOracleFee ?? 0)) /
+      100n;
+    const reputationOracleFee =
+      (escrow.totalFundedAmount * BigInt(escrow.reputationOracleFee ?? 0)) /
+      100n;
+    const exchangeOracleFee =
+      (escrow.totalFundedAmount * BigInt(escrow.exchangeOracleFee ?? 0)) / 100n;
+    const totalRewardAmount =
+      escrow.totalFundedAmount -
+      recordingOracleFee -
+      reputationOracleFee -
+      exchangeOracleFee;
     const reservedAmount =
-      (escrow.totalFundedAmount / BigInt(submissionsRequired)) *
-      BigInt(acceptedCount);
+      (totalRewardAmount / BigInt(submissionsRequired)) * BigInt(acceptedCount);
 
     await escrowClient.storeResults(
       job.escrowAddress,

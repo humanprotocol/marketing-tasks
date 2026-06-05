@@ -5,7 +5,6 @@ import {
   IsNumber,
   IsDate,
   IsEthereumAddress,
-  IsUrl,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import type { Manifest } from '../../common/interfaces/job';
@@ -21,14 +20,9 @@ import { IsEnumCaseInsensitive } from '../../common/decorators';
 export type ManifestDto = Manifest;
 
 export class SolveJobDto {
-  @ApiProperty({ name: 'post_url' })
+  @ApiProperty()
   @IsString()
-  @IsUrl({
-    protocols: ['https'],
-    require_protocol: true,
-    require_host: true,
-  })
-  public postUrl: string;
+  public solution: string;
 
   @ApiProperty({ name: 'assignment_id' })
   @IsString()
@@ -132,8 +126,8 @@ export class SolveJobResponseDto {
   @ApiProperty({ name: 'assignment_id' })
   assignmentId: string;
 
-  @ApiProperty({ name: 'post_url' })
-  postUrl: string;
+  @ApiProperty()
+  solution: string;
 
   @ApiProperty({ name: 'message' })
   message: string;

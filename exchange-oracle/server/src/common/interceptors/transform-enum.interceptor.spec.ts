@@ -73,126 +73,138 @@ describe('TransformEnumInterceptor', () => {
     }) as any;
   });
 
-  it('should transform enum values to lowercase', async () => {
-    // Run the interceptor
-    await interceptor.intercept(executionContext, callHandler).toPromise();
+  describe('intercept', () => {
+    describe('succeed', () => {
+      it('should transform enum values to lowercase', async () => {
+        // Run the interceptor
+        await interceptor.intercept(executionContext, callHandler).toPromise();
 
-    // Access the modified request body
-    const request = executionContext.switchToHttp().getRequest();
+        // Access the modified request body
+        const request = executionContext.switchToHttp().getRequest();
 
-    // Expectations
-    expect(request.body.jobType).toBe('social_media_promotion'); // Should be transformed to lowercase
-    expect(request.body).toEqual({
-      jobType: 'social_media_promotion',
-      amount: 5,
-      address: '0xCf88b3f1992458C2f5a229573c768D0E9F70C44e',
-    });
-    expect(callHandler.handle).toHaveBeenCalled(); // Ensure the handler is called
-  });
-
-  it('should throw an error if the value is not a valid enum', async () => {
-    // Modify the request body to have an invalid enum value for jobType
-    executionContext.switchToHttp = jest.fn().mockReturnValue({
-      getRequest: jest.fn().mockReturnValue({
-        body: {
-          jobType: 'invalidEnum', // Invalid enum value for jobType
+        // Expectations
+        expect(request.body.jobType).toBe('social_media_promotion'); // Should be transformed to lowercase
+        expect(request.body).toEqual({
+          jobType: 'social_media_promotion',
           amount: 5,
           address: '0xCf88b3f1992458C2f5a229573c768D0E9F70C44e',
-        },
-      }),
-    });
+        });
+        expect(callHandler.handle).toHaveBeenCalled(); // Ensure the handler is called
+      });
 
-    try {
-      // Run the interceptor
-      await interceptor.intercept(executionContext, callHandler).toPromise();
-    } catch (err) {
-      // Expect an error to be thrown
-      expect(err).toBeInstanceOf(BadRequestException);
-      expect(err.response.statusCode).toBe(400);
-      expect(err.response.message).toContain('Validation failed');
-    }
-  });
+      it('should not transform non-enum properties', async () => {
+        // Run the interceptor with a non-enum property (amount and address)
+        await interceptor.intercept(executionContext, callHandler).toPromise();
 
-  it('should not transform non-enum properties', async () => {
-    // Run the interceptor with a non-enum property (amount and address)
-    await interceptor.intercept(executionContext, callHandler).toPromise();
+        // Access the modified request body
+        const request = executionContext.switchToHttp().getRequest();
 
-    // Access the modified request body
-    const request = executionContext.switchToHttp().getRequest();
+        // Expectations
+        expect(request.body.amount).toBe(5); // Non-enum property should remain unchanged
+        expect(request.body.address).toBe(
+          '0xCf88b3f1992458C2f5a229573c768D0E9F70C44e',
+        ); // Non-enum string should remain unchanged
+        expect(callHandler.handle).toHaveBeenCalled();
+      });
 
-    // Expectations
-    expect(request.body.amount).toBe(5); // Non-enum property should remain unchanged
-    expect(request.body.address).toBe(
-      '0xCf88b3f1992458C2f5a229573c768D0E9F70C44e',
-    ); // Non-enum string should remain unchanged
-    expect(callHandler.handle).toHaveBeenCalled();
-  });
+      it('should handle nested objects with enums', async () => {
+        // Modify the request body to have a nested object with enum value
+        executionContext.switchToHttp = jest.fn().mockReturnValue({
+          getRequest: jest.fn().mockReturnValue({
+            body: {
+              transaction: {
+                jobType: 'SOCIAL_MEDIA_PROMOTION',
+                address: '0xCf88b3f1992458C2f5a229573c768D0E9F70C44e',
+              },
+              amount: 5,
+              address: '0xCf88b3f1992458C2f5a229573c768D0E9F70C44e',
+            },
+          }),
+        });
 
-  it('should handle nested objects with enums', async () => {
-    // Modify the request body to have a nested object with enum value
-    executionContext.switchToHttp = jest.fn().mockReturnValue({
-      getRequest: jest.fn().mockReturnValue({
-        body: {
+        // Run the interceptor
+        await interceptor.intercept(executionContext, callHandler).toPromise();
+
+        // Access the modified request body
+        const request = executionContext.switchToHttp().getRequest();
+
+        // Expectations
+        expect(request.body.transaction.jobType).toBe('social_media_promotion');
+        expect(request.body).toEqual({
           transaction: {
-            jobType: 'SOCIAL_MEDIA_PROMOTION',
+            jobType: 'social_media_promotion',
             address: '0xCf88b3f1992458C2f5a229573c768D0E9F70C44e',
           },
           amount: 5,
           address: '0xCf88b3f1992458C2f5a229573c768D0E9F70C44e',
-        },
-      }),
+        });
+        expect(callHandler.handle).toHaveBeenCalled();
+      });
     });
 
-    // Run the interceptor
-    await interceptor.intercept(executionContext, callHandler).toPromise();
+    describe('fail', () => {
+      it('should throw an error if the value is not a valid enum', async () => {
+        // Modify the request body to have an invalid enum value for jobType
+        executionContext.switchToHttp = jest.fn().mockReturnValue({
+          getRequest: jest.fn().mockReturnValue({
+            body: {
+              jobType: 'invalidEnum', // Invalid enum value for jobType
+              amount: 5,
+              address: '0xCf88b3f1992458C2f5a229573c768D0E9F70C44e',
+            },
+          }),
+        });
 
-    // Access the modified request body
-    const request = executionContext.switchToHttp().getRequest();
-
-    // Expectations
-    expect(request.body.transaction.jobType).toBe('social_media_promotion');
-    expect(request.body).toEqual({
-      transaction: {
-        jobType: 'social_media_promotion',
-        address: '0xCf88b3f1992458C2f5a229573c768D0E9F70C44e',
-      },
-      amount: 5,
-      address: '0xCf88b3f1992458C2f5a229573c768D0E9F70C44e',
+        try {
+          // Run the interceptor
+          await interceptor
+            .intercept(executionContext, callHandler)
+            .toPromise();
+        } catch (err) {
+          // Expect an error to be thrown
+          expect(err).toBeInstanceOf(BadRequestException);
+          expect(err.response.statusCode).toBe(400);
+          expect(err.response.message).toContain('Validation failed');
+        }
+      });
     });
-    expect(callHandler.handle).toHaveBeenCalled();
   });
 
-  it('should return bodyOrQuery if instance is not an object', () => {
-    // Test with `null` as the instance
-    let result = interceptor['lowercaseEnumProperties'](
-      { status: 'PENDING' },
-      null,
-      MockDto,
-    );
-    expect(result).toEqual({ status: 'PENDING' });
+  describe('lowercaseEnumProperties', () => {
+    describe('succeed', () => {
+      it('should return bodyOrQuery if instance is not an object', () => {
+        // Test with `null` as the instance
+        let result = interceptor['lowercaseEnumProperties'](
+          { status: 'PENDING' },
+          null,
+          MockDto,
+        );
+        expect(result).toEqual({ status: 'PENDING' });
 
-    // Test with `undefined` as the instance
-    result = interceptor['lowercaseEnumProperties'](
-      { status: 'PENDING' },
-      undefined,
-      MockDto,
-    );
-    expect(result).toEqual({ status: 'PENDING' });
+        // Test with `undefined` as the instance
+        result = interceptor['lowercaseEnumProperties'](
+          { status: 'PENDING' },
+          undefined,
+          MockDto,
+        );
+        expect(result).toEqual({ status: 'PENDING' });
 
-    // Test with a primitive value (string) as the instance
-    result = interceptor['lowercaseEnumProperties'](
-      { status: 'PENDING' },
-      'some string',
-      MockDto,
-    );
-    expect(result).toEqual({ status: 'PENDING' });
+        // Test with a primitive value (string) as the instance
+        result = interceptor['lowercaseEnumProperties'](
+          { status: 'PENDING' },
+          'some string',
+          MockDto,
+        );
+        expect(result).toEqual({ status: 'PENDING' });
 
-    // Test with a primitive value (number) as the instance
-    result = interceptor['lowercaseEnumProperties'](
-      { status: 'PENDING' },
-      123,
-      MockDto,
-    );
-    expect(result).toEqual({ status: 'PENDING' });
+        // Test with a primitive value (number) as the instance
+        result = interceptor['lowercaseEnumProperties'](
+          { status: 'PENDING' },
+          123,
+          MockDto,
+        );
+        expect(result).toEqual({ status: 'PENDING' });
+      });
+    });
   });
 });

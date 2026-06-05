@@ -1,8 +1,15 @@
+import { faker } from '@faker-js/faker';
 import { createMock } from '@golevelup/ts-jest';
 import { HMToken__factory } from '@human-protocol/core/typechain-types';
-import { Encryption, EncryptionUtils, EscrowClient } from '@human-protocol/sdk';
+import {
+  Encryption,
+  EncryptionUtils,
+  EscrowClient,
+  EscrowUtils,
+} from '@human-protocol/sdk';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import { ethers } from 'ethers';
 
 import {
   MOCK_ADDRESS,
@@ -134,35 +141,70 @@ describe('JobService', () => {
       eventType: EventType.ESCROW_CREATED,
     };
 
-    it('should create a new job in the database', async () => {
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue(null);
+    describe('succeed', () => {
+      it('should create a new job in the database', async () => {
+        jest
+          .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
+          .mockResolvedValue(null);
+        const getManifestSpy = jest
+          .spyOn(jobService, 'getManifest')
+          .mockResolvedValue(createManifest());
 
-      await jobService.createJob(webhook);
+        await jobService.createJob(webhook);
+        getManifestSpy.mockRestore();
 
-      expect(jobRepository.createUnique).toHaveBeenCalledWith({
-        chainId,
-        escrowAddress,
-        manifestUrl: MOCK_MANIFEST_URL,
-        reputationNetwork,
-        rewardToken: 'HMT',
-        status: JobStatus.ACTIVE,
+        expect(jobRepository.createUnique).toHaveBeenCalledWith({
+          chainId,
+          escrowAddress,
+          manifestUrl: MOCK_MANIFEST_URL,
+          jobType: JobType.SOCIAL_MEDIA_PROMOTION,
+          reputationNetwork,
+          rewardToken: 'HMT',
+          status: JobStatus.ACTIVE,
+        });
+      });
+
+      it('should create a new job using requestType from the manifest', async () => {
+        jest
+          .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
+          .mockResolvedValue(null);
+        const getManifestSpy = jest
+          .spyOn(jobService, 'getManifest')
+          .mockResolvedValue(
+            createManifest({
+              requestType: JobType.SOCIAL_MEDIA_ENGAGEMENT,
+            }),
+          );
+
+        await jobService.createJob(webhook);
+        getManifestSpy.mockRestore();
+
+        expect(jobRepository.createUnique).toHaveBeenCalledWith({
+          chainId,
+          escrowAddress,
+          manifestUrl: MOCK_MANIFEST_URL,
+          jobType: JobType.SOCIAL_MEDIA_ENGAGEMENT,
+          reputationNetwork,
+          rewardToken: 'HMT',
+          status: JobStatus.ACTIVE,
+        });
       });
     });
 
-    it('should fail if job already exists', async () => {
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
-        .mockResolvedValue({
-          chainId,
-          escrowAddress,
-          status: JobStatus.ACTIVE,
-        } as JobEntity);
+    describe('fail', () => {
+      it('should fail if job already exists', async () => {
+        jest
+          .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
+          .mockResolvedValue({
+            chainId,
+            escrowAddress,
+            status: JobStatus.ACTIVE,
+          } as JobEntity);
 
-      await expect(jobService.createJob(webhook)).rejects.toThrow(
-        'Job already exists',
-      );
+        await expect(jobService.createJob(webhook)).rejects.toThrow(
+          'Job already exists',
+        );
+      });
     });
   });
 
@@ -173,60 +215,73 @@ describe('JobService', () => {
       eventType: EventType.ESCROW_COMPLETED,
     };
 
-    it('should complete a job and update all related assignments', async () => {
-      const jobEntity = new JobEntity();
-      jobEntity.chainId = chainId;
-      jobEntity.escrowAddress = escrowAddress;
-      jobEntity.status = JobStatus.ACTIVE;
-      jobEntity.assignments = [
-        {
-          id: 1,
-          jobId: jobEntity.id,
-          status: AssignmentStatus.ACTIVE,
-        } as AssignmentEntity,
-        {
-          id: 2,
-          jobId: jobEntity.id,
-          status: AssignmentStatus.ACTIVE,
-        } as AssignmentEntity,
-      ];
+    describe('succeed', () => {
+      it('should complete a job and update all related assignments', async () => {
+        const jobEntity = new JobEntity();
+        jobEntity.chainId = chainId;
+        jobEntity.escrowAddress = escrowAddress;
+        jobEntity.status = JobStatus.ACTIVE;
+        jobEntity.assignments = [
+          {
+            id: 1,
+            jobId: jobEntity.id,
+            status: AssignmentStatus.ACTIVE,
+          } as AssignmentEntity,
+          {
+            id: 2,
+            jobId: jobEntity.id,
+            status: AssignmentStatus.ACTIVE,
+          } as AssignmentEntity,
+        ];
 
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddressWithAssignments')
-        .mockResolvedValue(jobEntity);
+        jest
+          .spyOn(
+            jobRepository,
+            'findOneByChainIdAndEscrowAddressWithAssignments',
+          )
+          .mockResolvedValue(jobEntity);
 
-      await jobService.completeJob(webhook);
+        await jobService.completeJob(webhook);
 
-      expect(jobRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: JobStatus.COMPLETED,
-        }),
-      );
+        expect(jobRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: JobStatus.COMPLETED,
+          }),
+        );
+      });
     });
 
-    it('should throw ServerError if job does not exist', async () => {
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddressWithAssignments')
-        .mockResolvedValue(null);
+    describe('fail', () => {
+      it('should throw ServerError if job does not exist', async () => {
+        jest
+          .spyOn(
+            jobRepository,
+            'findOneByChainIdAndEscrowAddressWithAssignments',
+          )
+          .mockResolvedValue(null);
 
-      await expect(jobService.completeJob(webhook)).rejects.toThrow(
-        new ServerError(ErrorJob.NotFound),
-      );
-    });
+        await expect(jobService.completeJob(webhook)).rejects.toThrow(
+          new ServerError(ErrorJob.NotFound),
+        );
+      });
 
-    it('should throw ConflictError if job is already completed', async () => {
-      const jobEntity = new JobEntity();
-      jobEntity.chainId = chainId;
-      jobEntity.escrowAddress = escrowAddress;
-      jobEntity.status = JobStatus.COMPLETED;
+      it('should throw ConflictError if job is already completed', async () => {
+        const jobEntity = new JobEntity();
+        jobEntity.chainId = chainId;
+        jobEntity.escrowAddress = escrowAddress;
+        jobEntity.status = JobStatus.COMPLETED;
 
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddressWithAssignments')
-        .mockResolvedValue(jobEntity);
+        jest
+          .spyOn(
+            jobRepository,
+            'findOneByChainIdAndEscrowAddressWithAssignments',
+          )
+          .mockResolvedValue(jobEntity);
 
-      await expect(jobService.completeJob(webhook)).rejects.toThrow(
-        new ConflictError(ErrorJob.AlreadyCompleted),
-      );
+        await expect(jobService.completeJob(webhook)).rejects.toThrow(
+          new ConflictError(ErrorJob.AlreadyCompleted),
+        );
+      });
     });
   });
 
@@ -237,60 +292,73 @@ describe('JobService', () => {
       eventType: EventType.ESCROW_CANCELED,
     };
 
-    it('should cancel a job and update all related assignments', async () => {
-      const jobEntity = new JobEntity();
-      jobEntity.chainId = chainId;
-      jobEntity.escrowAddress = escrowAddress;
-      jobEntity.status = JobStatus.ACTIVE;
-      jobEntity.assignments = [
-        {
-          id: 1,
-          jobId: jobEntity.id,
-          status: AssignmentStatus.ACTIVE,
-        } as AssignmentEntity,
-        {
-          id: 2,
-          jobId: jobEntity.id,
-          status: AssignmentStatus.ACTIVE,
-        } as AssignmentEntity,
-      ];
+    describe('succeed', () => {
+      it('should cancel a job and update all related assignments', async () => {
+        const jobEntity = new JobEntity();
+        jobEntity.chainId = chainId;
+        jobEntity.escrowAddress = escrowAddress;
+        jobEntity.status = JobStatus.ACTIVE;
+        jobEntity.assignments = [
+          {
+            id: 1,
+            jobId: jobEntity.id,
+            status: AssignmentStatus.ACTIVE,
+          } as AssignmentEntity,
+          {
+            id: 2,
+            jobId: jobEntity.id,
+            status: AssignmentStatus.ACTIVE,
+          } as AssignmentEntity,
+        ];
 
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddressWithAssignments')
-        .mockResolvedValue(jobEntity);
+        jest
+          .spyOn(
+            jobRepository,
+            'findOneByChainIdAndEscrowAddressWithAssignments',
+          )
+          .mockResolvedValue(jobEntity);
 
-      await jobService.cancelJob(webhook);
+        await jobService.cancelJob(webhook);
 
-      expect(jobRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: JobStatus.CANCELED,
-        }),
-      );
+        expect(jobRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: JobStatus.CANCELED,
+          }),
+        );
+      });
     });
 
-    it('should throw ServerError if job does not exist', async () => {
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddressWithAssignments')
-        .mockResolvedValue(null);
+    describe('fail', () => {
+      it('should throw ServerError if job does not exist', async () => {
+        jest
+          .spyOn(
+            jobRepository,
+            'findOneByChainIdAndEscrowAddressWithAssignments',
+          )
+          .mockResolvedValue(null);
 
-      await expect(jobService.cancelJob(webhook)).rejects.toThrow(
-        new ServerError(ErrorJob.NotFound),
-      );
-    });
+        await expect(jobService.cancelJob(webhook)).rejects.toThrow(
+          new ServerError(ErrorJob.NotFound),
+        );
+      });
 
-    it('should throw ConflictError if job is already canceled', async () => {
-      const jobEntity = new JobEntity();
-      jobEntity.chainId = chainId;
-      jobEntity.escrowAddress = escrowAddress;
-      jobEntity.status = JobStatus.CANCELED;
+      it('should throw ConflictError if job is already canceled', async () => {
+        const jobEntity = new JobEntity();
+        jobEntity.chainId = chainId;
+        jobEntity.escrowAddress = escrowAddress;
+        jobEntity.status = JobStatus.CANCELED;
 
-      jest
-        .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddressWithAssignments')
-        .mockResolvedValue(jobEntity);
+        jest
+          .spyOn(
+            jobRepository,
+            'findOneByChainIdAndEscrowAddressWithAssignments',
+          )
+          .mockResolvedValue(jobEntity);
 
-      await expect(jobService.cancelJob(webhook)).rejects.toThrow(
-        new ConflictError(ErrorJob.AlreadyCanceled),
-      );
+        await expect(jobService.cancelJob(webhook)).rejects.toThrow(
+          new ConflictError(ErrorJob.AlreadyCanceled),
+        );
+      });
     });
   });
 
@@ -301,6 +369,7 @@ describe('JobService', () => {
         chainId: 1,
         escrowAddress,
         manifestUrl: MOCK_MANIFEST_URL,
+        jobType: JobType.SOCIAL_MEDIA_PROMOTION,
         status: JobStatus.ACTIVE,
         createdAt: new Date(),
       },
@@ -310,65 +379,149 @@ describe('JobService', () => {
       jest.restoreAllMocks();
     });
 
-    it('should return an array of jobs calling the manifest', async () => {
-      const manifest: ManifestDto = createManifest();
+    describe('succeed', () => {
+      it('should return an array of jobs calling the manifest', async () => {
+        const manifest: ManifestDto = createManifest();
 
-      jest.spyOn(jobService, 'getManifest').mockResolvedValue(manifest);
-      jest
-        .spyOn(jobRepository, 'fetchFiltered')
-        .mockResolvedValueOnce({ entities: jobs as any, itemCount: 1 });
+        jest.spyOn(jobService, 'getManifest').mockResolvedValue(manifest);
+        jest
+          .spyOn(jobRepository, 'fetchFiltered')
+          .mockResolvedValueOnce({ entities: jobs as any, itemCount: 1 });
 
-      const result = await jobService.getJobList(
-        {
-          chainId,
-          jobType: JobType.SOCIAL_MEDIA_PROMOTION,
-          fields: [JobFieldName.JobDescription],
+        const result = await jobService.getJobList(
+          {
+            chainId,
+            jobType: JobType.SOCIAL_MEDIA_PROMOTION,
+            fields: [JobFieldName.JobDescription],
+            escrowAddress,
+            status: JobStatus.ACTIVE,
+            page: 0,
+            pageSize: 10,
+            skip: 0,
+          },
+          workerAddress,
+        );
+
+        expect(result.totalResults).toEqual(1);
+        expect(result.results[0]).toMatchObject({
+          chainId: 1,
+          jobDescription: manifest.campaign.description,
           escrowAddress,
+          jobType: JobType.SOCIAL_MEDIA_PROMOTION,
           status: JobStatus.ACTIVE,
-          page: 0,
-          pageSize: 10,
-          skip: 0,
-        },
-        workerAddress,
-      );
-
-      expect(result.totalResults).toEqual(1);
-      expect(result.results[0]).toMatchObject({
-        chainId: 1,
-        jobDescription: manifest.campaign.description,
-        escrowAddress,
-        jobType: JobType.SOCIAL_MEDIA_PROMOTION,
-        status: JobStatus.ACTIVE,
+        });
       });
-    });
 
-    it('should return an array of jobs without calling the manifest', async () => {
-      jest.spyOn(jobService, 'getManifest');
-      jest
-        .spyOn(jobRepository, 'fetchFiltered')
-        .mockResolvedValueOnce({ entities: jobs as any, itemCount: 1 });
+      it('should calculate reward amount from net funded amount', async () => {
+        const decimals = faker.number.int({ min: 6, max: 18 });
+        const submissionsRequired = faker.number.int({ min: 1, max: 10 });
+        const fundedAmount = faker.number.int({ min: 100, max: 1000 });
+        const recordingOracleFee = faker.number.int({ min: 1, max: 5 });
+        const reputationOracleFee = faker.number.int({ min: 1, max: 5 });
+        const exchangeOracleFee = faker.number.int({ min: 1, max: 5 });
+        const totalFundedAmount =
+          BigInt(fundedAmount) * 10n ** BigInt(decimals);
+        const netFundAmount =
+          totalFundedAmount -
+          (totalFundedAmount * BigInt(recordingOracleFee)) / 100n -
+          (totalFundedAmount * BigInt(reputationOracleFee)) / 100n -
+          (totalFundedAmount * BigInt(exchangeOracleFee)) / 100n;
+        const expectedRewardAmount = (
+          Number(ethers.formatUnits(netFundAmount, decimals)) /
+          submissionsRequired
+        ).toString();
+        const manifest: ManifestDto = createManifest({
+          submissionsRequired,
+        });
 
-      const result = await jobService.getJobList(
-        {
-          chainId,
-          jobType: JobType.SOCIAL_MEDIA_PROMOTION,
-          fields: [JobFieldName.CreatedAt],
+        jest.spyOn(jobService, 'getManifest').mockResolvedValue(manifest);
+        jest.spyOn(EscrowUtils, 'getEscrow').mockResolvedValue({
+          token: faker.finance.ethereumAddress(),
+          totalFundedAmount,
+          recordingOracleFee,
+          reputationOracleFee,
+          exchangeOracleFee,
+        } as any);
+        jest.spyOn(HMToken__factory, 'connect').mockReturnValue({
+          decimals: jest.fn().mockResolvedValue(decimals),
+        } as any);
+        jest
+          .spyOn(jobRepository, 'fetchFiltered')
+          .mockResolvedValueOnce({ entities: jobs as any, itemCount: 1 });
+
+        const result = await jobService.getJobList(
+          {
+            chainId,
+            jobType: JobType.SOCIAL_MEDIA_PROMOTION,
+            fields: [JobFieldName.RewardAmount],
+            escrowAddress,
+            status: JobStatus.ACTIVE,
+            page: 0,
+            pageSize: 10,
+            skip: 0,
+          },
+          workerAddress,
+        );
+
+        expect(result.results[0].rewardAmount).toBe(expectedRewardAmount);
+      });
+
+      it('should return an array of jobs without calling the manifest', async () => {
+        jest.spyOn(jobService, 'getManifest');
+        jest
+          .spyOn(jobRepository, 'fetchFiltered')
+          .mockResolvedValueOnce({ entities: jobs as any, itemCount: 1 });
+
+        const result = await jobService.getJobList(
+          {
+            chainId,
+            jobType: JobType.SOCIAL_MEDIA_PROMOTION,
+            fields: [JobFieldName.CreatedAt],
+            escrowAddress,
+            status: JobStatus.ACTIVE,
+            page: 0,
+            pageSize: 10,
+            skip: 0,
+          },
+          workerAddress,
+        );
+
+        expect(result.totalResults).toEqual(1);
+        expect(result.results[0]).toEqual({
+          chainId: 1,
+          createdAt: expect.any(String),
           escrowAddress,
+          jobType: JobType.SOCIAL_MEDIA_PROMOTION,
           status: JobStatus.ACTIVE,
-          page: 0,
-          pageSize: 10,
-          skip: 0,
-        },
-        workerAddress,
-      );
+        });
+      });
 
-      expect(result.totalResults).toEqual(1);
-      expect(result.results[0]).toEqual({
-        chainId: 1,
-        createdAt: expect.any(String),
-        escrowAddress,
-        jobType: JobType.SOCIAL_MEDIA_PROMOTION,
-        status: JobStatus.ACTIVE,
+      it('should return engagement jobs with their persisted job type', async () => {
+        jest.spyOn(jobRepository, 'fetchFiltered').mockResolvedValueOnce({
+          entities: [
+            {
+              ...jobs[0],
+              jobType: JobType.SOCIAL_MEDIA_ENGAGEMENT,
+            },
+          ] as any,
+          itemCount: 1,
+        });
+
+        const result = await jobService.getJobList(
+          {
+            chainId,
+            jobType: JobType.SOCIAL_MEDIA_ENGAGEMENT,
+            fields: [],
+            escrowAddress,
+            status: JobStatus.ACTIVE,
+            page: 0,
+            pageSize: 10,
+            skip: 0,
+          },
+          workerAddress,
+        );
+
+        expect(result.results[0].jobType).toBe(JobType.SOCIAL_MEDIA_ENGAGEMENT);
       });
     });
   });
@@ -392,130 +545,140 @@ describe('JobService', () => {
       assignment.job.status = JobStatus.ACTIVE;
     });
 
-    it('should forward the submission to the recording oracle and update assignment status', async () => {
-      jest
-        .spyOn(assignmentRepository, 'findOneById')
-        .mockResolvedValue(assignment as AssignmentEntity);
-      jest.spyOn(webhookService, 'sendWebhook').mockResolvedValue(undefined);
+    describe('succeed', () => {
+      it('should forward the submission to the recording oracle and update assignment status', async () => {
+        jest
+          .spyOn(assignmentRepository, 'findOneById')
+          .mockResolvedValue(assignment as AssignmentEntity);
+        jest.spyOn(webhookService, 'sendWebhook').mockResolvedValue(undefined);
 
-      await jobService.solveJob(assignment.id, 'https://x.com/test/status/1');
+        await jobService.solveJob(assignment.id, 'https://x.com/test/status/1');
 
-      expect(webhookService.sendWebhook).toHaveBeenCalledWith({
-        chainId,
-        escrowAddress,
-        eventType: EventType.SUBMISSION_IN_REVIEW,
-        eventData: {
-          assigneeId: workerAddress,
-          postUrl: 'https://x.com/test/status/1',
-        },
+        expect(webhookService.sendWebhook).toHaveBeenCalledWith({
+          chainId,
+          escrowAddress,
+          eventType: EventType.SUBMISSION_IN_REVIEW,
+          eventData: {
+            assigneeId: workerAddress,
+            solution: 'https://x.com/test/status/1',
+          },
+        });
+        expect(assignmentRepository.updateOne).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: assignment.id,
+            status: AssignmentStatus.VALIDATION,
+          }),
+        );
       });
-      expect(assignmentRepository.updateOne).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: assignment.id,
-          status: AssignmentStatus.VALIDATION,
-        }),
-      );
     });
 
-    it('should fail if assignment status is not ACTIVE', async () => {
-      assignment.status = AssignmentStatus.CANCELED;
-      jest
-        .spyOn(assignmentRepository, 'findOneById')
-        .mockResolvedValue(assignment as AssignmentEntity);
+    describe('fail', () => {
+      it('should fail if assignment status is not ACTIVE', async () => {
+        assignment.status = AssignmentStatus.CANCELED;
+        jest
+          .spyOn(assignmentRepository, 'findOneById')
+          .mockResolvedValue(assignment as AssignmentEntity);
 
-      await expect(
-        jobService.solveJob(1, 'https://x.com/test/status/1'),
-      ).rejects.toThrow(new ConflictError(ErrorAssignment.InvalidStatus));
-    });
+        await expect(
+          jobService.solveJob(1, 'https://x.com/test/status/1'),
+        ).rejects.toThrow(new ConflictError(ErrorAssignment.InvalidStatus));
+      });
 
-    it('should fail if user is not assigned to the job', async () => {
-      jest.spyOn(assignmentRepository, 'findOneById').mockResolvedValue(null);
+      it('should fail if user is not assigned to the job', async () => {
+        jest.spyOn(assignmentRepository, 'findOneById').mockResolvedValue(null);
 
-      await expect(
-        jobService.solveJob(1, 'https://x.com/test/status/1'),
-      ).rejects.toThrow('Assignment not found');
-    });
+        await expect(
+          jobService.solveJob(1, 'https://x.com/test/status/1'),
+        ).rejects.toThrow('Assignment not found');
+      });
 
-    it('should fail if job status is not ACTIVE', async () => {
-      assignment.job.status = JobStatus.COMPLETED;
-      jest
-        .spyOn(assignmentRepository, 'findOneById')
-        .mockResolvedValue(assignment as AssignmentEntity);
+      it('should fail if job status is not ACTIVE', async () => {
+        assignment.job.status = JobStatus.COMPLETED;
+        jest
+          .spyOn(assignmentRepository, 'findOneById')
+          .mockResolvedValue(assignment as AssignmentEntity);
 
-      await expect(
-        jobService.solveJob(1, 'https://x.com/test/status/1'),
-      ).rejects.toThrow(new ConflictError(ErrorJob.InvalidStatus));
-    });
+        await expect(
+          jobService.solveJob(1, 'https://x.com/test/status/1'),
+        ).rejects.toThrow(new ConflictError(ErrorJob.InvalidStatus));
+      });
 
-    it('should surface a generic retry-later error when webhook forwarding fails', async () => {
-      jest
-        .spyOn(assignmentRepository, 'findOneById')
-        .mockResolvedValue(assignment as AssignmentEntity);
-      jest
-        .spyOn(webhookService, 'sendWebhook')
-        .mockRejectedValue(new Error('network failure'));
+      it('should surface a generic retry-later error when webhook forwarding fails', async () => {
+        jest
+          .spyOn(assignmentRepository, 'findOneById')
+          .mockResolvedValue(assignment as AssignmentEntity);
+        jest
+          .spyOn(webhookService, 'sendWebhook')
+          .mockRejectedValue(new Error('network failure'));
 
-      await expect(
-        jobService.solveJob(1, 'https://x.com/test/status/1'),
-      ).rejects.toThrow(new ServerError(ErrorWebhook.SubmissionForwardFailed));
-    });
+        await expect(
+          jobService.solveJob(1, 'https://x.com/test/status/1'),
+        ).rejects.toThrow(
+          new ServerError(ErrorWebhook.SubmissionForwardFailed),
+        );
+      });
 
-    it('should surface the downstream webhook message when available', async () => {
-      jest
-        .spyOn(assignmentRepository, 'findOneById')
-        .mockResolvedValue(assignment as AssignmentEntity);
-      const downstreamError: any = new Error(
-        'Request failed with status code 400',
-      );
-      downstreamError.responseMessage =
-        'Manifest does not contain the required data';
-      jest
-        .spyOn(webhookService, 'sendWebhook')
-        .mockRejectedValue(downstreamError);
+      it('should surface the downstream webhook message when available', async () => {
+        jest
+          .spyOn(assignmentRepository, 'findOneById')
+          .mockResolvedValue(assignment as AssignmentEntity);
+        const downstreamError: any = new Error(
+          'Request failed with status code 400',
+        );
+        downstreamError.responseMessage =
+          'Manifest does not contain the required data';
+        jest
+          .spyOn(webhookService, 'sendWebhook')
+          .mockRejectedValue(downstreamError);
 
-      await expect(
-        jobService.solveJob(1, 'https://x.com/test/status/1'),
-      ).rejects.toThrow(
-        new ServerError('Manifest does not contain the required data'),
-      );
+        await expect(
+          jobService.solveJob(1, 'https://x.com/test/status/1'),
+        ).rejects.toThrow(
+          new ServerError('Manifest does not contain the required data'),
+        );
+      });
     });
   });
 
   describe('processInvalidJobSolution', () => {
-    it('should mark a worker assignment as rejected', async () => {
-      assignmentRepository.findOneByEscrowAndWorker = jest
-        .fn()
-        .mockResolvedValue({
-          id: 1,
-          status: AssignmentStatus.VALIDATION,
-        });
+    describe('succeed', () => {
+      it('should mark a worker assignment as rejected', async () => {
+        assignmentRepository.findOneByEscrowAndWorker = jest
+          .fn()
+          .mockResolvedValue({
+            id: 1,
+            status: AssignmentStatus.VALIDATION,
+          });
 
-      await jobService.processInvalidJobSolution({
-        chainId,
-        escrowAddress,
-        eventType: EventType.SUBMISSION_REJECTED,
-        eventData: { assignments: [{ assigneeId: workerAddress }] },
-      });
-
-      expect(assignmentRepository.updateOne).toHaveBeenCalledWith({
-        id: 1,
-        status: AssignmentStatus.REJECTED,
-      });
-    });
-
-    it('should throw an error if the assignment is not found', async () => {
-      assignmentRepository.findOneByEscrowAndWorker = jest
-        .fn()
-        .mockResolvedValue(null);
-
-      await expect(
-        jobService.processInvalidJobSolution({
+        await jobService.processInvalidJobSolution({
           chainId,
           escrowAddress,
           eventType: EventType.SUBMISSION_REJECTED,
           eventData: { assignments: [{ assigneeId: workerAddress }] },
-        }),
-      ).rejects.toThrow(`Solution not found in Escrow: ${escrowAddress}`);
+        });
+
+        expect(assignmentRepository.updateOne).toHaveBeenCalledWith({
+          id: 1,
+          status: AssignmentStatus.REJECTED,
+        });
+      });
+    });
+
+    describe('fail', () => {
+      it('should throw an error if the assignment is not found', async () => {
+        assignmentRepository.findOneByEscrowAndWorker = jest
+          .fn()
+          .mockResolvedValue(null);
+
+        await expect(
+          jobService.processInvalidJobSolution({
+            chainId,
+            escrowAddress,
+            eventType: EventType.SUBMISSION_REJECTED,
+            eventData: { assignments: [{ assigneeId: workerAddress }] },
+          }),
+        ).rejects.toThrow(`Solution not found in Escrow: ${escrowAddress}`);
+      });
     });
   });
 
@@ -526,42 +689,46 @@ describe('JobService', () => {
       jest.clearAllMocks();
     });
 
-    it('should return a parsed manifest', async () => {
-      const manifest = createManifest();
-      downloadFileFromUrlMock.mockResolvedValueOnce(manifest);
+    describe('succeed', () => {
+      it('should return a parsed manifest', async () => {
+        const manifest = createManifest();
+        downloadFileFromUrlMock.mockResolvedValueOnce(manifest);
 
-      await expect(
-        jobService.getManifest(chainId, escrowAddress, MOCK_MANIFEST_URL),
-      ).resolves.toEqual(manifest);
-    });
+        await expect(
+          jobService.getManifest(chainId, escrowAddress, MOCK_MANIFEST_URL),
+        ).resolves.toEqual(manifest);
+      });
 
-    it('should send an escrow failed webhook and throw when manifest is missing', async () => {
-      downloadFileFromUrlMock.mockRejectedValueOnce(new Error('missing'));
-      jest.spyOn(webhookService, 'sendWebhook').mockResolvedValue(undefined);
+      it('should decrypt an encrypted manifest', async () => {
+        const manifest = createManifest();
+        downloadFileFromUrlMock.mockResolvedValueOnce('encrypted');
+        jest.spyOn(EncryptionUtils, 'isEncrypted').mockReturnValue(true);
+        (Encryption.build as any).mockResolvedValue({
+          decrypt: jest.fn().mockResolvedValue(JSON.stringify(manifest)),
+        });
 
-      await expect(
-        jobService.getManifest(chainId, escrowAddress, MOCK_MANIFEST_URL),
-      ).rejects.toThrow(new NotFoundError(ErrorJob.ManifestNotFound));
-
-      expect(webhookService.sendWebhook).toHaveBeenCalledWith({
-        chainId,
-        escrowAddress,
-        eventType: EventType.ESCROW_FAILED,
-        eventData: { reason: ErrorJob.ManifestNotFound },
+        await expect(
+          jobService.getManifest(chainId, escrowAddress, MOCK_MANIFEST_URL),
+        ).resolves.toEqual(manifest);
       });
     });
 
-    it('should decrypt an encrypted manifest', async () => {
-      const manifest = createManifest();
-      downloadFileFromUrlMock.mockResolvedValueOnce('encrypted');
-      jest.spyOn(EncryptionUtils, 'isEncrypted').mockReturnValue(true);
-      (Encryption.build as any).mockResolvedValue({
-        decrypt: jest.fn().mockResolvedValue(JSON.stringify(manifest)),
-      });
+    describe('fail', () => {
+      it('should send an escrow failed webhook and throw when manifest is missing', async () => {
+        downloadFileFromUrlMock.mockRejectedValueOnce(new Error('missing'));
+        jest.spyOn(webhookService, 'sendWebhook').mockResolvedValue(undefined);
 
-      await expect(
-        jobService.getManifest(chainId, escrowAddress, MOCK_MANIFEST_URL),
-      ).resolves.toEqual(manifest);
+        await expect(
+          jobService.getManifest(chainId, escrowAddress, MOCK_MANIFEST_URL),
+        ).rejects.toThrow(new NotFoundError(ErrorJob.ManifestNotFound));
+
+        expect(webhookService.sendWebhook).toHaveBeenCalledWith({
+          chainId,
+          escrowAddress,
+          eventType: EventType.ESCROW_FAILED,
+          eventData: { reason: ErrorJob.ManifestNotFound },
+        });
+      });
     });
   });
 });
