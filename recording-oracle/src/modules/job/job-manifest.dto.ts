@@ -78,6 +78,24 @@ class SocialMediaPromotionRequirementsDto {
   minReposts?: number;
 }
 
+class XApiCredentialsDto {
+  @IsString()
+  @IsNotEmpty()
+  consumerKey!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  consumerSecret!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  accessToken!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  accessTokenSecret!: string;
+}
+
 class SocialMediaEngagementRequirementsDto {
   @IsString()
   @IsNotEmpty()
@@ -98,6 +116,11 @@ class SocialMediaEngagementRequirementsDto {
   @IsOptional()
   @IsBoolean()
   checkComment?: boolean;
+
+  @ValidateNested()
+  @IsOptional()
+  @Type(() => XApiCredentialsDto)
+  xApiCredentials?: XApiCredentialsDto;
 }
 
 class ManifestAiValidationDto {
@@ -207,12 +230,24 @@ export function validateManifestDto(manifest: IManifest): IManifest {
 
     if (
       requirements.checkComment &&
-      !requirements.checkLike &&
+      !(requirements.checkLike && requirements.xApiCredentials) &&
       !requirements.checkRepost &&
       !requirements.checkQuote
     ) {
       throw new ValidationError(ErrorJob.InvalidManifest, undefined, [
-        'checkComment requires checkLike, checkRepost, or checkQuote for social_media_engagement',
+        'checkComment requires checkRepost, checkQuote, or checkLike with xApiCredentials for social_media_engagement',
+      ]);
+    }
+
+    if (requirements.checkLike && !requirements.xApiCredentials) {
+      throw new ValidationError(ErrorJob.InvalidManifest, undefined, [
+        'xApiCredentials must be provided when checkLike is enabled for social_media_engagement',
+      ]);
+    }
+
+    if (requirements.xApiCredentials && !requirements.checkLike) {
+      throw new ValidationError(ErrorJob.InvalidManifest, undefined, [
+        'xApiCredentials can only be provided when checkLike is enabled for social_media_engagement',
       ]);
     }
   }
