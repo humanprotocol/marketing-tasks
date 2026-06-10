@@ -41,5 +41,42 @@ export type LinkdapiEngagementItem = LinkdapiProfile & {
   url?: string;
 };
 
-export type LinkdapiCollectionPayload = LinkdapiEngagementItem[] &
-  Record<string, unknown>;
+export type LinkdapiPagination = {
+  cursor?: string;
+  nextCursor?: string;
+  next_cursor?: string;
+};
+
+export type LinkdapiPaginatedData = {
+  cursor?: string;
+  nextCursor?: string;
+  next_cursor?: string;
+  pagination?: LinkdapiPagination;
+};
+
+export type LinkdapiPostLikesData = LinkdapiPaginatedData & {
+  likes?: LinkdapiEngagementItem[];
+};
+
+export type LinkdapiPostCommentsData = LinkdapiPaginatedData & {
+  comments?: LinkdapiEngagementItem[];
+};
+
+export type LinkdapiPostInfoData = {
+  quotes?: LinkdapiEngagementItem[];
+  quotePosts?: LinkdapiEngagementItem[];
+  quotedBy?: LinkdapiEngagementItem[];
+  reposts?: LinkdapiEngagementItem[];
+  reposters?: LinkdapiEngagementItem[];
+  repostedBy?: LinkdapiEngagementItem[];
+  resharedBy?: LinkdapiEngagementItem[];
+  shares?: LinkdapiEngagementItem[];
+  shareActors?: LinkdapiEngagementItem[];
+};
+
+export type EngagementMatches = {
+  likingUsers: Set<string>;
+  repostingUsers: Set<string>;
+  quotingUsers: Set<string>;
+  commentingUsers: Set<string>;
+};

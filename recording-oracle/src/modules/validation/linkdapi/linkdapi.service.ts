@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { HTTPError, LinkdAPI, LinkdAPIError } from 'linkdapi';
 
 import { LinkdapiConfigService } from '../../../common/config/linkdapi-config.service';
 import { SubmissionRejectionReason } from '../../../common/constants/errors';
@@ -7,23 +8,29 @@ import { ISocialMediaEngagementManifest } from '../../../common/interfaces/job';
 import { SubmissionEntity } from '../../submission/submission.entity';
 import type { SubmissionValidationResult } from '../validation.service';
 import {
-  LinkdapiCollectionPayload,
+  EngagementMatches,
   LinkdapiEngagementItem,
-  LinkdapiErrorResponse,
+  LinkdapiPostCommentsData,
+  LinkdapiPostInfoData,
+  LinkdapiPostLikesData,
   LinkdapiProfile,
   LinkdapiResponse,
 } from './linkdapi.interfaces';
 
-type EngagementMatches = {
-  likingUsers: Set<string>;
-  repostingUsers: Set<string>;
-  quotingUsers: Set<string>;
-  commentingUsers: Set<string>;
-};
-
 @Injectable()
 export class LinkdapiService {
-  constructor(private readonly linkdapiConfigService: LinkdapiConfigService) {}
+  private readonly api?: LinkdAPI;
+
+  constructor(private readonly linkdapiConfigService: LinkdapiConfigService) {
+    const apiKey = this.linkdapiConfigService.apiKey;
+
+    if (apiKey) {
+      this.api = new LinkdAPI({
+        apiKey,
+        baseUrl: this.linkdapiConfigService.baseUrl,
+      });
+    }
+  }
 
   async validateSubmissions(
     submissions: SubmissionEntity[],
@@ -107,136 +114,311 @@ export class LinkdapiService {
     }
   }
 
-  getLikingUsers(
+  async getLikingUsers(
     postUrn: string,
     targetUsers: Set<string>,
   ): Promise<Set<string>> {
-    return this.collectPaginatedMatches(
-      '/api/v1/posts/likes',
-      postUrn,
-      targetUsers,
-      ['likes', 'reactions', 'items', 'elements', 'results', 'data'],
-    );
+    if (targetUsers.size === 0) {
+      return new Set<string>();
+    }
+
+    if (!this.api) {
+      throw new ServerError(
+        'LinkdAPI config is required to process LinkedIn social_media_engagement jobs',
+      );
+    }
+
+    const matches = new Set<string>();
+    let start = 0;
+
+    try {
+      for (
+        let page = 0;
+        page < this.linkdapiConfigService.maxPagesPerAction &&
+        matches.size < targetUsers.size;
+        page += 1
+      ) {
+        const payload = (await this.api.getPostLikes(
+          postUrn,
+          start,
+        )) as LinkdapiResponse<LinkdapiPostLikesData>;
+
+        if (payload.success === false) {
+          const details = payload.message ?? payload.detail;
+          throw new ServerError(
+            details
+              ? `LinkdAPI getPostLikes failed: ${details}`
+              : 'LinkdAPI getPostLikes failed',
+          );
+        }
+
+        const data = this.getData(payload);
+        const items = data.likes ?? [];
+
+        if (items.length === 0) {
+          break;
+        }
+
+        this.addMatches(items, targetUsers, matches);
+        start += items.length;
+      }
+
+      return matches;
+    } catch (error) {
+      if (error instanceof ServerError) {
+        throw error;
+      }
+
+      if (error instanceof HTTPError) {
+        if (error.statusCode === 404) {
+          throw new ValidationError(
+            SubmissionRejectionReason.TargetPostNotFound,
+          );
+        }
+
+        throw new ServerError(
+          error.responseBody
+            ? `LinkdAPI getPostLikes failed with HTTP ${error.statusCode}: ${error.responseBody}`
+            : `LinkdAPI getPostLikes failed with HTTP ${error.statusCode}`,
+        );
+      }
+
+      if (error instanceof LinkdAPIError) {
+        throw new ServerError(`LinkdAPI getPostLikes failed: ${error.message}`);
+      }
+
+      throw error;
+    }
   }
 
-  getCommentingUsers(
+  async getCommentingUsers(
     postUrn: string,
     targetUsers: Set<string>,
   ): Promise<Set<string>> {
-    return this.collectPaginatedMatches(
-      '/api/v1/posts/comments',
-      postUrn,
-      targetUsers,
-      ['comments', 'items', 'elements', 'results', 'data'],
-      {
-        count: this.linkdapiConfigService.pageSize.toString(),
-        sortBy: 'date_posted',
-      },
-    );
+    if (targetUsers.size === 0) {
+      return new Set<string>();
+    }
+
+    if (!this.api) {
+      throw new ServerError(
+        'LinkdAPI config is required to process LinkedIn social_media_engagement jobs',
+      );
+    }
+
+    const matches = new Set<string>();
+    let start = 0;
+    let cursor = '';
+
+    try {
+      for (
+        let page = 0;
+        page < this.linkdapiConfigService.maxPagesPerAction &&
+        matches.size < targetUsers.size;
+        page += 1
+      ) {
+        const payload = (await this.api.getPostComments(
+          postUrn,
+          start,
+          this.linkdapiConfigService.pageSize,
+          cursor,
+        )) as LinkdapiResponse<LinkdapiPostCommentsData>;
+
+        if (payload.success === false) {
+          const details = payload.message ?? payload.detail;
+          throw new ServerError(
+            details
+              ? `LinkdAPI getPostComments failed: ${details}`
+              : 'LinkdAPI getPostComments failed',
+          );
+        }
+
+        const data = this.getData(payload);
+        const items = data.comments ?? [];
+
+        if (items.length === 0) {
+          break;
+        }
+
+        this.addMatches(items, targetUsers, matches);
+
+        const nextCursor = this.getCursor(data);
+        if (nextCursor && nextCursor !== cursor) {
+          cursor = nextCursor;
+        } else {
+          start += items.length;
+          cursor = '';
+        }
+      }
+
+      return matches;
+    } catch (error) {
+      if (error instanceof ServerError) {
+        throw error;
+      }
+
+      if (error instanceof HTTPError) {
+        if (error.statusCode === 404) {
+          throw new ValidationError(
+            SubmissionRejectionReason.TargetPostNotFound,
+          );
+        }
+
+        throw new ServerError(
+          error.responseBody
+            ? `LinkdAPI getPostComments failed with HTTP ${error.statusCode}: ${error.responseBody}`
+            : `LinkdAPI getPostComments failed with HTTP ${error.statusCode}`,
+        );
+      }
+
+      if (error instanceof LinkdAPIError) {
+        throw new ServerError(
+          `LinkdAPI getPostComments failed: ${error.message}`,
+        );
+      }
+
+      throw error;
+    }
   }
 
   async getRepostingUsers(
     postUrn: string,
     targetUsers: Set<string>,
   ): Promise<Set<string>> {
-    return this.getPostInfoEngagementUsers(postUrn, targetUsers, [
-      'reposts',
-      'reposters',
-      'repostedBy',
-      'resharedBy',
-      'shares',
-      'shareActors',
-    ]);
+    const matches = new Set<string>();
+
+    if (targetUsers.size === 0) {
+      return matches;
+    }
+
+    if (!this.api) {
+      throw new ServerError(
+        'LinkdAPI config is required to process LinkedIn social_media_engagement jobs',
+      );
+    }
+
+    try {
+      const payload = (await this.api.getPostInfo(
+        postUrn,
+      )) as LinkdapiResponse<LinkdapiPostInfoData>;
+
+      if (payload.success === false) {
+        const details = payload.message ?? payload.detail;
+        throw new ServerError(
+          details
+            ? `LinkdAPI getPostInfo failed: ${details}`
+            : 'LinkdAPI getPostInfo failed',
+        );
+      }
+
+      const data = this.getData(payload);
+      const items =
+        data.reposts ??
+        data.reposters ??
+        data.repostedBy ??
+        data.resharedBy ??
+        data.shares ??
+        data.shareActors ??
+        [];
+      this.addMatches(items, targetUsers, matches);
+
+      return matches;
+    } catch (error) {
+      if (error instanceof ServerError) {
+        throw error;
+      }
+
+      if (error instanceof HTTPError) {
+        if (error.statusCode === 404) {
+          throw new ValidationError(
+            SubmissionRejectionReason.TargetPostNotFound,
+          );
+        }
+
+        throw new ServerError(
+          error.responseBody
+            ? `LinkdAPI getPostInfo failed with HTTP ${error.statusCode}: ${error.responseBody}`
+            : `LinkdAPI getPostInfo failed with HTTP ${error.statusCode}`,
+        );
+      }
+
+      if (error instanceof LinkdAPIError) {
+        throw new ServerError(`LinkdAPI getPostInfo failed: ${error.message}`);
+      }
+
+      throw error;
+    }
   }
 
   async getQuotingUsers(
     postUrn: string,
     targetUsers: Set<string>,
   ): Promise<Set<string>> {
-    return this.getPostInfoEngagementUsers(postUrn, targetUsers, [
-      'quotes',
-      'quotePosts',
-      'quotedBy',
-      'reposts',
-      'reposters',
-      'repostedBy',
-      'resharedBy',
-      'shares',
-      'shareActors',
-    ]);
-  }
-
-  private async collectPaginatedMatches(
-    endpoint: string,
-    postUrn: string,
-    targetUsers: Set<string>,
-    arrayKeys: string[],
-    endpointParams: Record<string, string> = {},
-  ): Promise<Set<string>> {
     const matches = new Set<string>();
-    let start = 0;
-    let cursor: string | null = null;
 
     if (targetUsers.size === 0) {
       return matches;
     }
 
-    for (
-      let page = 0;
-      page < this.linkdapiConfigService.maxPagesPerAction &&
-      matches.size < targetUsers.size;
-      page += 1
-    ) {
-      const payload = await this.linkdapiGet<LinkdapiCollectionPayload>(
-        endpoint,
-        {
-          urn: postUrn,
-          start: start.toString(),
-          ...(cursor ? { cursor } : {}),
-          ...endpointParams,
-        },
+    if (!this.api) {
+      throw new ServerError(
+        'LinkdAPI config is required to process LinkedIn social_media_engagement jobs',
       );
-      const data = this.getData(payload);
-      const items = this.firstArrayAt(data, arrayKeys);
+    }
 
-      if (items.length === 0) {
-        break;
+    try {
+      const payload = (await this.api.getPostInfo(
+        postUrn,
+      )) as LinkdapiResponse<LinkdapiPostInfoData>;
+
+      if (payload.success === false) {
+        const details = payload.message ?? payload.detail;
+        throw new ServerError(
+          details
+            ? `LinkdAPI getPostInfo failed: ${details}`
+            : 'LinkdAPI getPostInfo failed',
+        );
       }
 
+      const data = this.getData(payload);
+      const items =
+        data.quotes ??
+        data.quotePosts ??
+        data.quotedBy ??
+        data.reposts ??
+        data.reposters ??
+        data.repostedBy ??
+        data.resharedBy ??
+        data.shares ??
+        data.shareActors ??
+        [];
       this.addMatches(items, targetUsers, matches);
 
-      const nextCursor = this.getCursor(data);
-      if (nextCursor && nextCursor !== cursor) {
-        cursor = nextCursor;
-      } else {
-        start += items.length;
-        cursor = null;
-      }
-    }
-
-    return matches;
-  }
-
-  private async getPostInfoEngagementUsers(
-    postUrn: string,
-    targetUsers: Set<string>,
-    arrayKeys: string[],
-  ): Promise<Set<string>> {
-    const matches = new Set<string>();
-
-    if (targetUsers.size === 0) {
       return matches;
+    } catch (error) {
+      if (error instanceof ServerError) {
+        throw error;
+      }
+
+      if (error instanceof HTTPError) {
+        if (error.statusCode === 404) {
+          throw new ValidationError(
+            SubmissionRejectionReason.TargetPostNotFound,
+          );
+        }
+
+        throw new ServerError(
+          error.responseBody
+            ? `LinkdAPI getPostInfo failed with HTTP ${error.statusCode}: ${error.responseBody}`
+            : `LinkdAPI getPostInfo failed with HTTP ${error.statusCode}`,
+        );
+      }
+
+      if (error instanceof LinkdAPIError) {
+        throw new ServerError(`LinkdAPI getPostInfo failed: ${error.message}`);
+      }
+
+      throw error;
     }
-
-    const payload = await this.linkdapiGet<LinkdapiCollectionPayload>(
-      '/api/v1/posts/info',
-      { urn: postUrn },
-    );
-    const data = this.getData(payload);
-    const items = this.firstArrayAt(data, arrayKeys);
-    this.addMatches(items, targetUsers, matches);
-
-    return matches;
   }
 
   private addMatches(
@@ -394,28 +576,6 @@ export class LinkdapiService {
       : (payload as T);
   }
 
-  private firstArrayAt(
-    data: unknown,
-    keys: string[],
-  ): LinkdapiEngagementItem[] {
-    if (Array.isArray(data)) {
-      return data as LinkdapiEngagementItem[];
-    }
-
-    if (!data || typeof data !== 'object') {
-      return [];
-    }
-
-    const record = data as Record<string, unknown>;
-    for (const key of keys) {
-      if (Array.isArray(record[key])) {
-        return record[key] as LinkdapiEngagementItem[];
-      }
-    }
-
-    return [];
-  }
-
   private getCursor(data: unknown): string | null {
     if (!data || typeof data !== 'object') {
       return null;
@@ -444,75 +604,5 @@ export class LinkdapiService {
       submission,
       rejectionReason,
     }));
-  }
-
-  private async linkdapiGet<T>(
-    endpoint: string,
-    params: Record<string, string>,
-  ): Promise<LinkdapiResponse<T>> {
-    const apiKey = this.linkdapiConfigService.apiKey;
-    if (!apiKey) {
-      throw new ServerError(
-        'LinkdAPI config is required to process LinkedIn social_media_engagement jobs',
-      );
-    }
-
-    const url = new URL(endpoint, this.linkdapiConfigService.baseUrl);
-    Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.set(key, value);
-    });
-
-    const response = await fetch(url, {
-      headers: {
-        Accept: 'application/json',
-        'X-linkdapi-apikey': apiKey,
-      },
-    });
-    const text = await response.text();
-    const body = this.parseResponseBody(text, endpoint);
-
-    if (!response.ok || body.success === false) {
-      if (response.status === 404) {
-        throw new ValidationError(SubmissionRejectionReason.TargetPostNotFound);
-      }
-
-      throw new ServerError(
-        this.getRequestErrorMessage(response.status, endpoint, body),
-      );
-    }
-
-    return body as LinkdapiResponse<T>;
-  }
-
-  private parseResponseBody(
-    body: string,
-    endpoint: string,
-  ): LinkdapiErrorResponse {
-    if (!body.trim()) {
-      return {};
-    }
-
-    try {
-      return JSON.parse(body) as LinkdapiErrorResponse;
-    } catch {
-      throw new ServerError(
-        `LinkdAPI returned non-JSON from ${endpoint}: ${body.slice(0, 300)}`,
-      );
-    }
-  }
-
-  private getRequestErrorMessage(
-    status: number,
-    endpoint: string,
-    body: LinkdapiErrorResponse,
-  ): string {
-    const baseMessage = `LinkdAPI request failed with HTTP ${status} for ${endpoint}`;
-    const nestedError =
-      body.error && typeof body.error === 'object'
-        ? body.error.message
-        : body.error;
-    const details = body.message ?? nestedError ?? body.detail;
-
-    return details ? `${baseMessage}: ${details}` : baseMessage;
   }
 }

@@ -8,25 +8,13 @@ import { ISocialMediaEngagementManifest } from '../../../common/interfaces/job';
 import { SubmissionEntity } from '../../submission/submission.entity';
 import type { SubmissionValidationResult } from '../validation.service';
 import {
+  EngagementMatches,
+  XApiCredentials,
   XApiErrorResponse,
   XApiListResponse,
   XApiTweet,
   XApiUser,
 } from './x-api.interfaces';
-
-type EngagementMatches = {
-  likingUsernames: Set<string>;
-  repostingUsernames: Set<string>;
-  quotingUsernames: Set<string>;
-  commentingUsernames: Set<string>;
-};
-
-type XApiCredentials = {
-  consumerKey: string;
-  consumerSecret: string;
-  accessToken: string;
-  accessTokenSecret: string;
-};
 
 @Injectable()
 export class XApiService {

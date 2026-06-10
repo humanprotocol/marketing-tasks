@@ -72,7 +72,7 @@ describe('LinkdapiService', () => {
     expect(fetchMock.mock.calls[0][0].toString()).toContain(
       '/api/v1/posts/likes',
     );
-    expect(fetchMock.mock.calls[1][0].toString()).toContain('cursor=next');
+    expect(fetchMock.mock.calls[1][0].toString()).toContain('start=1');
     expect(fetchMock.mock.calls[0][1].headers['X-linkdapi-apikey']).toBe(
       'linkdapi-key',
     );
@@ -157,10 +157,16 @@ describe('LinkdapiService', () => {
   });
 
   it('throws a clear server error when LinkdAPI credentials are missing', async () => {
-    linkdapiConfigService.apiKey = undefined;
+    const serviceWithoutApiKey = new LinkdapiService({
+      ...linkdapiConfigService,
+      apiKey: undefined,
+    } as LinkdapiConfigService);
 
     await expect(
-      service.getLikingUsers('7353638537595932672', new Set(['alice'])),
+      serviceWithoutApiKey.getLikingUsers(
+        '7353638537595932672',
+        new Set(['alice']),
+      ),
     ).rejects.toThrow(
       'LinkdAPI config is required to process LinkedIn social_media_engagement jobs',
     );
@@ -171,6 +177,7 @@ describe('LinkdapiService', () => {
     fetchMock.mockResolvedValueOnce({
       ok: false,
       status: 404,
+      statusText: 'Not Found',
       text: jest.fn().mockResolvedValue(JSON.stringify({ message: 'missing' })),
     });
 
@@ -182,7 +189,7 @@ describe('LinkdapiService', () => {
   function mockLinkdapiResponse(payload: unknown): void {
     fetchMock.mockResolvedValueOnce({
       ok: true,
-      text: jest.fn().mockResolvedValue(JSON.stringify(payload)),
+      json: jest.fn().mockResolvedValue(payload),
     });
   }
 });
