@@ -75,4 +75,9 @@ export const envValidator = Joi.object({
   X_API_BASE_URL: Joi.string().uri(),
   X_API_PAGE_SIZE: Joi.number(),
   X_API_MAX_PAGES_PER_ACTION: Joi.number(),
+  // LinkdAPI
+  LINKDAPI_API_KEY: Joi.string().optional(),
+  LINKDAPI_BASE_URL: Joi.string().uri(),
+  LINKDAPI_PAGE_SIZE: Joi.number(),
+  LINKDAPI_MAX_PAGES_PER_ACTION: Joi.number(),
 });

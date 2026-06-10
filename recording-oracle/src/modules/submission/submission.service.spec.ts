@@ -125,6 +125,28 @@ describe('SubmissionService', () => {
           }),
         );
       });
+
+      it('creates an engagement submission with a normalized LinkedIn profile URL', async () => {
+        jobService.createJob.mockResolvedValue(
+          generateJob({ jobType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT }),
+        );
+
+        await expect(
+          submissionService.createSubmission({
+            ...webhook,
+            eventData: {
+              assigneeId: workerAddress,
+              solution: 'https://www.linkedin.com/in/Human-Protocol/',
+            },
+          }),
+        ).resolves.toBe('Submission received.');
+
+        expect(submissionRepository.createUnique).toHaveBeenCalledWith(
+          expect.objectContaining({
+            solution: 'human-protocol',
+          }),
+        );
+      });
     });
 
     describe('fail', () => {
