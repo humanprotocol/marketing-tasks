@@ -23,7 +23,7 @@ export const generateManifest = (
       },
       requirements: {
         targetPostUrl: `https://x.com/${faker.internet.username()}/status/${faker.string.numeric(8)}`,
-        checkLike: true,
+        checkQuote: true,
       },
       ...overrides,
     } as IManifest;
