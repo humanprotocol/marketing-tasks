@@ -22,6 +22,12 @@ describe('XApiService', () => {
   let service: XApiService;
   let fetchMock: jest.Mock;
   let xApiConfigService: XApiConfigServiceMock;
+  const requesterCredentials = {
+    consumerKey: 'requester-consumer-key',
+    consumerSecret: 'requester-consumer-secret',
+    accessToken: 'requester-access-token',
+    accessTokenSecret: 'requester-access-token-secret',
+  };
 
   beforeEach(async () => {
     fetchMock = jest.fn();
@@ -131,6 +137,24 @@ describe('XApiService', () => {
     );
   });
 
+  it('authenticates liking users requests with manifest X credentials when provided', async () => {
+    mockXApiResponse({ data: [] });
+
+    await service.getLikingUsernames(
+      '123',
+      new Set(['alice']),
+      requesterCredentials,
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toContain(
+      'oauth_consumer_key="requester-consumer-key"',
+    );
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toContain(
+      'oauth_token="requester-access-token"',
+    );
+  });
+
   it('fails engagement X API calls clearly when OAuth config is missing', async () => {
     xApiConfigService.consumerKey = undefined;
 
@@ -152,6 +176,7 @@ describe('XApiService', () => {
         checkRepost: true,
         checkQuote: true,
         checkComment: true,
+        xApiCredentials: requesterCredentials,
       },
     });
     const submissions = [
@@ -189,14 +214,17 @@ describe('XApiService', () => {
     expect(service.getLikingUsernames).toHaveBeenCalledWith(
       '123',
       new Set(['alice', 'bob']),
+      requesterCredentials,
     );
     expect(service.getRepostingUsernames).toHaveBeenCalledWith(
       '123',
       new Set(['alice', 'bob']),
+      requesterCredentials,
     );
     expect(service.getQuotingUsernames).toHaveBeenCalledWith(
       '123',
       new Set(['alice']),
+      requesterCredentials,
     );
     expect(service.getCommentingUsernames).not.toHaveBeenCalled();
   });
@@ -211,6 +239,7 @@ describe('XApiService', () => {
         checkRepost: true,
         checkQuote: true,
         checkComment: true,
+        xApiCredentials: requesterCredentials,
       },
     });
     const submissions = [
@@ -293,10 +322,12 @@ describe('XApiService', () => {
     expect(service.getQuotingUsernames).toHaveBeenCalledWith(
       '123',
       new Set(['alice', 'bob']),
+      undefined,
     );
     expect(service.getCommentingUsernames).toHaveBeenCalledWith(
       '123',
       new Set(['alice']),
+      undefined,
     );
   });
 
@@ -310,6 +341,7 @@ describe('XApiService', () => {
         checkRepost: false,
         checkQuote: false,
         checkComment: true,
+        xApiCredentials: requesterCredentials,
       },
     });
     const submissions = [
@@ -340,6 +372,80 @@ describe('XApiService', () => {
     ]);
 
     expect(getCommentingUsernamesSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not call like validation and rejects when checkLike has no manifest X credentials', async () => {
+    const targetPostUrl = 'https://x.com/human/status/123';
+    const manifest = generateManifest({
+      requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+      requirements: {
+        targetPostUrl,
+        checkLike: true,
+      },
+    });
+    const submissions = [generateSubmission({ id: 1, solution: 'alice' })];
+    const getLikingUsernamesSpy = jest.spyOn(service, 'getLikingUsernames');
+
+    await expect(
+      service.validateSubmissions(
+        submissions,
+        manifest as ISocialMediaEngagementManifest,
+      ),
+    ).resolves.toEqual([
+      {
+        submission: submissions[0],
+        rejectionReason: SubmissionRejectionReason.MissingRequiredLike,
+      },
+    ]);
+
+    expect(getLikingUsernamesSpy).not.toHaveBeenCalled();
+  });
+
+  it('uses manifest X credentials for all enabled engagement checks when provided', async () => {
+    mockXApiResponse({
+      data: [{ id: '1', username: 'alice' }],
+    });
+    mockXApiResponse({
+      data: [{ id: '1', username: 'alice' }],
+    });
+
+    const targetPostUrl = 'https://x.com/human/status/123';
+    const manifest = generateManifest({
+      requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+      requirements: {
+        targetPostUrl,
+        checkLike: true,
+        checkRepost: true,
+        xApiCredentials: requesterCredentials,
+      },
+    });
+    const submissions = [generateSubmission({ id: 1, solution: 'alice' })];
+
+    await expect(
+      service.validateSubmissions(
+        submissions,
+        manifest as ISocialMediaEngagementManifest,
+      ),
+    ).resolves.toEqual([
+      {
+        submission: submissions[0],
+        rejectionReason: null,
+      },
+    ]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0].toString()).toContain(
+      '/tweets/123/liking_users',
+    );
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toContain(
+      'oauth_consumer_key="requester-consumer-key"',
+    );
+    expect(fetchMock.mock.calls[1][0].toString()).toContain(
+      '/tweets/123/retweeted_by',
+    );
+    expect(fetchMock.mock.calls[1][1].headers.Authorization).toContain(
+      'oauth_consumer_key="requester-consumer-key"',
+    );
   });
 
   it('maps quote authors from includes users for quote validation', async () => {
