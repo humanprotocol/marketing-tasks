@@ -12,7 +12,6 @@ import { SubmissionEntity } from '../../submission/submission.entity';
 import type { SubmissionValidationResult } from '../validation.service';
 import {
   EngagementMatches,
-  XApiCredentials,
   XApiErrorResponse,
   XApiListResponse,
   XApiTweet,

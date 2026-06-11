@@ -1,7 +1,10 @@
 import { Test } from '@nestjs/testing';
 
 import { LinkdapiConfigService } from '../../../common/config/linkdapi-config.service';
-import { SubmissionRejectionReason } from '../../../common/constants/errors';
+import {
+  ErrorJob,
+  SubmissionRejectionReason,
+} from '../../../common/constants/errors';
 import { JobRequestType } from '../../../common/enums/job';
 import { ISocialMediaEngagementManifest } from '../../../common/interfaces/job';
 import { generateManifest } from '../../job/fixtures';
@@ -78,7 +81,7 @@ describe('LinkdapiService', () => {
     );
   });
 
-  it('validates LinkedIn engagement submissions using required actions only for remaining candidates', async () => {
+  it('validates LinkedIn engagement submissions with likes and comments', async () => {
     const manifest = generateManifest({
       requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
       platforms: ['linkedin'],
@@ -86,7 +89,6 @@ describe('LinkdapiService', () => {
         targetPostUrl:
           'https://www.linkedin.com/feed/update/urn:li:activity:7353638537595932672/',
         checkLike: true,
-        checkRepost: true,
         checkComment: true,
       },
     }) as ISocialMediaEngagementManifest;
@@ -102,9 +104,6 @@ describe('LinkdapiService', () => {
       .spyOn(service, 'getLikingUsers')
       .mockResolvedValue(new Set(['alice-builder', 'bob-builder']));
     jest
-      .spyOn(service, 'getRepostingUsers')
-      .mockResolvedValue(new Set(['alice-builder']));
-    jest
       .spyOn(service, 'getCommentingUsers')
       .mockResolvedValue(new Set(['alice-builder']));
 
@@ -117,7 +116,7 @@ describe('LinkdapiService', () => {
       },
       {
         submission: submissions[1],
-        rejectionReason: SubmissionRejectionReason.MissingRequiredRepost,
+        rejectionReason: SubmissionRejectionReason.MissingRequiredComment,
       },
     ]);
 
@@ -125,14 +124,32 @@ describe('LinkdapiService', () => {
       '7353638537595932672',
       new Set(['alice-builder', 'bob-builder']),
     );
-    expect(service.getRepostingUsers).toHaveBeenCalledWith(
+    expect(service.getCommentingUsers).toHaveBeenCalledWith(
       '7353638537595932672',
       new Set(['alice-builder', 'bob-builder']),
     );
-    expect(service.getCommentingUsers).toHaveBeenCalledWith(
-      '7353638537595932672',
-      new Set(['alice-builder']),
-    );
+  });
+
+  it('rejects unsupported LinkedIn repost and quote checks', async () => {
+    const manifest = generateManifest({
+      requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+      platforms: ['linkedin'],
+      requirements: {
+        targetPostUrl:
+          'https://www.linkedin.com/feed/update/urn:li:activity:7353638537595932672/',
+        checkRepost: true,
+        checkQuote: true,
+      },
+    }) as ISocialMediaEngagementManifest;
+
+    await expect(
+      service.validateSubmissions(
+        [generateSubmission({ solution: 'alice-builder' })],
+        manifest,
+      ),
+    ).rejects.toThrow(ErrorJob.InvalidManifest);
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('returns target post rejection when the LinkedIn post URN cannot be extracted', async () => {

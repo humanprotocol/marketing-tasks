@@ -62,21 +62,22 @@ export type LinkdapiPostCommentsData = LinkdapiPaginatedData & {
   comments?: LinkdapiEngagementItem[];
 };
 
-export type LinkdapiPostInfoData = {
-  quotes?: LinkdapiEngagementItem[];
-  quotePosts?: LinkdapiEngagementItem[];
-  quotedBy?: LinkdapiEngagementItem[];
-  reposts?: LinkdapiEngagementItem[];
-  reposters?: LinkdapiEngagementItem[];
-  repostedBy?: LinkdapiEngagementItem[];
-  resharedBy?: LinkdapiEngagementItem[];
-  shares?: LinkdapiEngagementItem[];
-  shareActors?: LinkdapiEngagementItem[];
+export type LinkdapiPageRequest = {
+  start: number;
+  cursor: string;
 };
 
-export type EngagementMatches = {
-  likingUsers: Set<string>;
-  repostingUsers: Set<string>;
-  quotingUsers: Set<string>;
-  commentingUsers: Set<string>;
+export type LinkdapiPaginatedRequest<T extends LinkdapiPaginatedData> = (
+  page: LinkdapiPageRequest,
+) => Promise<LinkdapiResponse<T>>;
+
+export type LinkdapiPaginatedRequestOptions<
+  T extends LinkdapiPaginatedData,
+  TItem,
+> = {
+  operationName: string;
+  useCursor: boolean;
+  request: LinkdapiPaginatedRequest<T>;
+  selectItems: (data: T) => TItem[];
+  shouldStop?: (items: TItem[]) => boolean;
 };

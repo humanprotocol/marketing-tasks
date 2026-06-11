@@ -55,10 +55,3 @@ export type EngagementMatches = {
   quotingUsernames: Set<string>;
   commentingUsernames: Set<string>;
 };
-
-export type XApiCredentials = {
-  consumerKey: string;
-  consumerSecret: string;
-  accessToken: string;
-  accessTokenSecret: string;
-};
