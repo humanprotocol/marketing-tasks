@@ -26,6 +26,7 @@ import {
   WebhookDto,
 } from '../../modules/webhook/webhook.dto';
 
+import { SOCIAL_PROFILE_NORMALIZERS } from './submission.constants';
 import { SubmissionEntity } from './submission.entity';
 import { SubmissionRepository } from './submission.repository';
 
@@ -128,7 +129,7 @@ export class SubmissionService {
   ): Promise<void> {
     const normalizedSolution =
       jobType === JobRequestType.SOCIAL_MEDIA_ENGAGEMENT
-        ? this.validateXUsername(solution)
+        ? this.validateSocialProfile(solution)
         : this.validatePostUrl(solution);
     const existingSubmission =
       await this.submissionRepository.findOneByJobIdAndWorkerAddress(
@@ -183,13 +184,15 @@ export class SubmissionService {
     return parsedUrl.toString();
   }
 
-  private validateXUsername(username: string): string {
-    const normalizedUsername = username.trim().replace(/^@/, '').toLowerCase();
-    if (!/^[a-z0-9_]{1,15}$/.test(normalizedUsername)) {
-      throw new ValidationError(ErrorJob.InvalidXUsername);
+  private validateSocialProfile(profile: string): string {
+    for (const normalizer of SOCIAL_PROFILE_NORMALIZERS) {
+      const normalizedProfile = normalizer.normalize(profile);
+      if (normalizedProfile && normalizer.isValid(normalizedProfile)) {
+        return normalizedProfile;
+      }
     }
 
-    return normalizedUsername;
+    throw new ValidationError(ErrorJob.InvalidSocialProfile);
   }
 
   private async recordValidationResult(

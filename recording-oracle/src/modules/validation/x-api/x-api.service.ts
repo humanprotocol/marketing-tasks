@@ -11,18 +11,12 @@ import {
 import { SubmissionEntity } from '../../submission/submission.entity';
 import type { SubmissionValidationResult } from '../validation.service';
 import {
+  EngagementMatches,
   XApiErrorResponse,
   XApiListResponse,
   XApiTweet,
   XApiUser,
 } from './x-api.interfaces';
-
-type EngagementMatches = {
-  likingUsernames: Set<string>;
-  repostingUsernames: Set<string>;
-  quotingUsernames: Set<string>;
-  commentingUsernames: Set<string>;
-};
 
 @Injectable()
 export class XApiService {

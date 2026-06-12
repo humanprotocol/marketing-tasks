@@ -2,11 +2,49 @@ import { SubmissionRejectionReason } from '../../common/constants/errors';
 import { AbuseProbability } from '../../common/interfaces/job';
 import { SubmissionValidationRule } from './submission.dto';
 
+export type SocialProfileNormalizer = {
+  normalize: (profile: string) => string | null;
+  isValid: (profile: string) => boolean;
+};
+
 export const ABUSE_PRIORITY: Record<AbuseProbability, number> = {
   low: 1,
   medium: 2,
   high: 3,
 };
+
+export const SOCIAL_PROFILE_NORMALIZERS: SocialProfileNormalizer[] = [
+  {
+    normalize: (profile: string): string | null =>
+      profile.trim().replace(/^@/, '').toLowerCase(),
+    isValid: (profile: string): boolean => /^[a-z0-9_]{1,15}$/.test(profile),
+  },
+  {
+    normalize: (profile: string): string | null => {
+      const trimmedProfile = profile.trim().replace(/^@/, '');
+
+      try {
+        const parsedUrl = new URL(trimmedProfile);
+        const path = parsedUrl.pathname.replace(/\/+$/, '');
+        const match = path.match(/^\/in\/([^/]+)$/i);
+
+        if (
+          parsedUrl.protocol === 'https:' &&
+          parsedUrl.hostname.endsWith('linkedin.com') &&
+          match
+        ) {
+          return match[1].toLowerCase();
+        }
+      } catch {
+        return trimmedProfile.toLowerCase();
+      }
+
+      return null;
+    },
+    isValid: (profile: string): boolean =>
+      /^[a-z0-9][a-z0-9_-]{0,99}$/.test(profile),
+  },
+];
 
 export const SUBMISSION_VALIDATION_RULES: SubmissionValidationRule[] = [
   {

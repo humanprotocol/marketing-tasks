@@ -447,6 +447,28 @@ describe('JobService', () => {
           }),
         );
       });
+
+      it('validates LinkedIn like and comment engagement manifests without X credentials', async () => {
+        const manifest = generateManifest({
+          requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+          platforms: ['linkedin'],
+          requirements: {
+            targetPostUrl:
+              'https://www.linkedin.com/feed/update/urn:li:activity:7353638537595932672/',
+            checkLike: true,
+            checkComment: true,
+          },
+        });
+        storageService.download.mockResolvedValue(manifest);
+
+        await expect(
+          jobService.getManifest(faker.internet.url()),
+        ).resolves.toEqual(
+          expect.objectContaining({
+            requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+          }),
+        );
+      });
     });
 
     describe('fail', () => {
@@ -477,6 +499,25 @@ describe('JobService', () => {
         await expect(
           jobService.getManifest(faker.internet.url()),
         ).rejects.toBeInstanceOf(ValidationError);
+      });
+
+      it('rejects LinkedIn engagement manifests that require reposts or quotes', async () => {
+        storageService.download.mockResolvedValue(
+          generateManifest({
+            requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+            platforms: ['linkedin'],
+            requirements: {
+              targetPostUrl:
+                'https://www.linkedin.com/feed/update/urn:li:activity:7353638537595932672/',
+              checkRepost: true,
+              checkQuote: true,
+            },
+          }),
+        );
+
+        await expect(
+          jobService.getManifest(faker.internet.url()),
+        ).rejects.toThrow(ErrorJob.InvalidManifest);
       });
 
       it('rejects engagement manifests with partial X credentials', async () => {

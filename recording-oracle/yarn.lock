@@ -5903,6 +5903,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"linkdapi@npm:^1.0.2":
+  version: 1.0.2
+  resolution: "linkdapi@npm:1.0.2"
+  checksum: 10c0/27d47d4be4cf380784a91b32913afcf86c1ac15b44d6bce46df59790c0e883742e02e10c1b887326e13044bbe8eb31b46f46d16d714e1071e453309f619509a7
+  languageName: node
+  linkType: hard
+
 "load-esm@npm:1.0.3":
   version: 1.0.3
   resolution: "load-esm@npm:1.0.3"
@@ -7080,6 +7087,7 @@ __metadata:
     helmet: "npm:^7.1.0"
     jest: "npm:^29.7.0"
     joi: "npm:^17.13.3"
+    linkdapi: "npm:^1.0.2"
     minio: "npm:8.0.6"
     pg: "npm:^8.16.3"
     prettier: "npm:^3.8.1"

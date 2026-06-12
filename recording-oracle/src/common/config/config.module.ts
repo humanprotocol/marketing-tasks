@@ -7,6 +7,7 @@ import { Web3ConfigService } from './web3-config.service';
 import { NetworkConfigService } from './network-config.service';
 import { DatabaseConfigService } from './database-config.service';
 import { GrokConfigService } from './grok-config.service';
+import { LinkdapiConfigService } from './linkdapi-config.service';
 import { XApiConfigService } from './x-api-config.service';
 
 @Global()
@@ -20,6 +21,7 @@ import { XApiConfigService } from './x-api-config.service';
     NetworkConfigService,
     DatabaseConfigService,
     GrokConfigService,
+    LinkdapiConfigService,
     XApiConfigService,
   ],
   exports: [
@@ -31,6 +33,7 @@ import { XApiConfigService } from './x-api-config.service';
     NetworkConfigService,
     DatabaseConfigService,
     GrokConfigService,
+    LinkdapiConfigService,
     XApiConfigService,
   ],
 })
