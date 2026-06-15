@@ -191,6 +191,28 @@ describe('SubmissionService', () => {
           }),
         );
       });
+
+      it('creates an engagement submission with a normalized LinkedIn display name', async () => {
+        jobService.createJob.mockResolvedValue(
+          generateJob({ jobType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT }),
+        );
+
+        await expect(
+          submissionService.createSubmission({
+            ...webhook,
+            eventData: {
+              assigneeId: workerAddress,
+              solution: 'Oriol   Blanch',
+            },
+          }),
+        ).resolves.toBe('Submission received.');
+
+        expect(submissionRepository.createUnique).toHaveBeenCalledWith(
+          expect.objectContaining({
+            solution: 'oriol blanch',
+          }),
+        );
+      });
     });
 
     describe('fail', () => {
@@ -231,7 +253,7 @@ describe('SubmissionService', () => {
             ...webhook,
             eventData: {
               assigneeId: workerAddress,
-              solution: 'not a valid profile',
+              solution: 'not @ valid profile!',
             },
           }),
         ).rejects.toThrow(ErrorJob.InvalidSocialProfile);

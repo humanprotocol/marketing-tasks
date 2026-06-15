@@ -103,6 +103,57 @@ describe('LinkdapiService', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('matches LinkedIn display names with and without spaces', async () => {
+    mockLinkdapiResponse({
+      data: {
+        likes: [
+          {
+            actor: {
+              name: 'Oriol Blanch',
+              url: 'https://www.linkedin.com/in/ACoAACEE-_0BbIdm6ZyR4TaauGijdThxUHYtUys',
+            },
+          },
+        ],
+      },
+    });
+
+    const result = await service.getLikingUsers(
+      '7353638537595932672',
+      new Set(['oriol blanch', 'oriolblanch']),
+    );
+
+    expect(result).toEqual(new Set(['oriol blanch']));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('validates a LinkedIn submission using a display name without spaces', async () => {
+    const manifest = generateManifest({
+      requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+      platforms: ['linkedin'],
+      requirements: {
+        targetPostUrl:
+          'https://www.linkedin.com/feed/update/urn:li:activity:7353638537595932672/',
+        checkLike: true,
+      },
+    }) as ISocialMediaEngagementManifest;
+    const submission = generateSubmission({ solution: 'OriolBlanch' });
+
+    mockLinkdapiResponse({
+      data: {
+        likes: [{ actor: { name: 'Oriol Blanch' } }],
+      },
+    });
+
+    await expect(
+      service.validateSubmissions([submission], manifest),
+    ).resolves.toEqual([
+      {
+        submission,
+        rejectionReason: null,
+      },
+    ]);
+  });
+
   it('validates LinkedIn engagement submissions with likes and comments', async () => {
     const manifest = generateManifest({
       requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
