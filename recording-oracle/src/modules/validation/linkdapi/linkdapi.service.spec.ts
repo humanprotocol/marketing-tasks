@@ -55,8 +55,10 @@ describe('LinkdapiService', () => {
               profileUrl: 'https://www.linkedin.com/in/Alice-Builder/',
             },
           },
+          ...Array.from({ length: 9 }, () => ({
+            profile: { publicIdentifier: 'someone-else' },
+          })),
         ],
-        pagination: { nextCursor: 'next' },
       },
     });
     mockLinkdapiResponse({
@@ -75,10 +77,30 @@ describe('LinkdapiService', () => {
     expect(fetchMock.mock.calls[0][0].toString()).toContain(
       '/api/v1/posts/likes',
     );
-    expect(fetchMock.mock.calls[1][0].toString()).toContain('start=1');
+    expect(fetchMock.mock.calls[1][0].toString()).toContain('start=10');
     expect(fetchMock.mock.calls[0][1].headers['X-linkdapi-apikey']).toBe(
       'linkdapi-key',
     );
+  });
+
+  it('stops paginating likes when LinkdAPI returns the final page', async () => {
+    mockLinkdapiResponse({
+      data: {
+        currentPage: 1,
+        pages: 1,
+        likes: Array.from({ length: 10 }, () => ({
+          actor: { publicIdentifier: 'bob-builder' },
+        })),
+      },
+    });
+
+    const result = await service.getLikingUsers(
+      '7353638537595932672',
+      new Set(['alice-builder']),
+    );
+
+    expect(result).toEqual(new Set());
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('validates LinkedIn engagement submissions with likes and comments', async () => {
@@ -128,6 +150,120 @@ describe('LinkdapiService', () => {
       '7353638537595932672',
       new Set(['alice-builder', 'bob-builder']),
     );
+  });
+
+  it('requests LinkedIn comments with the configured page size', async () => {
+    mockLinkdapiResponse({
+      data: {
+        comments: [{ commenter: { publicIdentifier: 'alice-builder' } }],
+      },
+    });
+
+    const result = await service.getCommentingUsers(
+      '7353638537595932672',
+      new Set(['alice-builder']),
+    );
+
+    expect(result).toEqual(new Set(['alice-builder']));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    const requestUrl = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(requestUrl.pathname).toBe('/api/v1/posts/comments');
+    expect(requestUrl.searchParams.get('urn')).toBe('7353638537595932672');
+    expect(requestUrl.searchParams.get('start')).toBe('0');
+    expect(requestUrl.searchParams.get('count')).toBe('100');
+    expect(requestUrl.searchParams.has('sortBy')).toBe(false);
+    expect(fetchMock.mock.calls[0][1].headers['X-linkdapi-apikey']).toBe(
+      'linkdapi-key',
+    );
+  });
+
+  it('stops paginating LinkedIn comments when the page is shorter than the configured page size', async () => {
+    mockLinkdapiResponse({
+      data: {
+        comments: [{ commenter: { publicIdentifier: 'bob-builder' } }],
+      },
+    });
+
+    const result = await service.getCommentingUsers(
+      '7353638537595932672',
+      new Set(['alice-builder']),
+    );
+
+    expect(result).toEqual(new Set());
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('paginates full LinkedIn comment pages by the configured page size', async () => {
+    mockLinkdapiResponse({
+      data: {
+        comments: Array.from({ length: 100 }, () => ({
+          commenter: { publicIdentifier: 'bob-builder' },
+        })),
+      },
+    });
+    mockLinkdapiResponse({
+      data: {
+        comments: [{ commenter: { publicIdentifier: 'alice-builder' } }],
+      },
+    });
+
+    const result = await service.getCommentingUsers(
+      '7353638537595932672',
+      new Set(['alice-builder']),
+    );
+
+    expect(result).toEqual(new Set(['alice-builder']));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    const secondRequestUrl = new URL(fetchMock.mock.calls[1][0] as string);
+    expect(secondRequestUrl.searchParams.get('start')).toBe('100');
+  });
+
+  it('treats later body-level LinkdAPI failures as the end of engagement results', async () => {
+    mockLinkdapiResponse({
+      data: {
+        likes: Array.from({ length: 10 }, () => ({
+          actor: { publicIdentifier: 'bob-builder' },
+        })),
+      },
+    });
+    mockLinkdapiResponse({
+      success: false,
+      message: "the data cannot be displayed or it doesn't exist",
+    });
+
+    const result = await service.getLikingUsers(
+      '7353638537595932672',
+      new Set(['alice-builder']),
+    );
+
+    expect(result).toEqual(new Set());
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('treats later paginated 404 responses as the end of LinkedIn engagement results', async () => {
+    mockLinkdapiResponse({
+      data: {
+        comments: Array.from({ length: 100 }, () => ({
+          commenter: { publicIdentifier: 'bob-builder' },
+        })),
+      },
+    });
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      statusText: 'Not Found',
+      text: jest.fn().mockResolvedValue(JSON.stringify({ message: 'missing' })),
+    });
+
+    const result = await service.getCommentingUsers(
+      '7353638537595932672',
+      new Set(['alice-builder']),
+    );
+
+    expect(result).toEqual(new Set());
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('rejects unsupported LinkedIn repost and quote checks', async () => {

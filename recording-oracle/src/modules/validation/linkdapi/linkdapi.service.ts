@@ -128,6 +128,7 @@ export class LinkdapiService {
 
     const items = await this.requestPaginatedData({
       operationName: 'getPostLikes',
+      pageSize: this.linkdapiConfigService.pageSize,
       useCursor: false,
       request: ({ start }) =>
         api.getPostLikes(postUrn, start) as Promise<
@@ -152,6 +153,7 @@ export class LinkdapiService {
 
     const items = await this.requestPaginatedData({
       operationName: 'getPostComments',
+      pageSize: this.linkdapiConfigService.pageSize,
       useCursor: true,
       request: ({ start, cursor }) =>
         api.getPostComments(
@@ -167,8 +169,13 @@ export class LinkdapiService {
     return this.getMatchingUsers(items, targetUsers);
   }
 
+  getTargetPostUrn(postUrl?: string): string | null {
+    return this.extractPostUrn(postUrl);
+  }
+
   private async requestPaginatedData<T extends LinkdapiPaginatedData, TItem>({
     operationName,
+    pageSize,
     useCursor,
     request,
     selectItems,
@@ -187,6 +194,10 @@ export class LinkdapiService {
         const payload = await request({ start, cursor });
 
         if (payload.success === false) {
+          if (allItems.length > 0) {
+            return allItems;
+          }
+
           const details = payload.message ?? payload.detail;
           throw new ServerError(
             details
@@ -228,11 +239,21 @@ export class LinkdapiService {
           typeof cursorValue === 'string' && cursorValue.length > 0
             ? cursorValue
             : null;
+        const currentPage =
+          typeof record.currentPage === 'number' ? record.currentPage : null;
+        const pages = typeof record.pages === 'number' ? record.pages : null;
+
+        if (
+          items.length < pageSize ||
+          (currentPage !== null && pages !== null && currentPage >= pages)
+        ) {
+          break;
+        }
 
         if (useCursor && nextCursor && nextCursor !== cursor) {
           cursor = nextCursor;
         } else {
-          start += items.length;
+          start += pageSize;
           cursor = '';
         }
       }
@@ -245,6 +266,10 @@ export class LinkdapiService {
 
       if (error instanceof HTTPError) {
         if (error.statusCode === 404) {
+          if (allItems.length > 0) {
+            return allItems;
+          }
+
           throw new ValidationError(
             SubmissionRejectionReason.TargetPostNotFound,
           );

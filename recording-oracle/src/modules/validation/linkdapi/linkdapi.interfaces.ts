@@ -52,6 +52,8 @@ export type LinkdapiPaginatedData = {
   nextCursor?: string;
   next_cursor?: string;
   pagination?: LinkdapiPagination;
+  currentPage?: number;
+  pages?: number;
 };
 
 export type LinkdapiPostLikesData = LinkdapiPaginatedData & {
@@ -76,6 +78,7 @@ export type LinkdapiPaginatedRequestOptions<
   TItem,
 > = {
   operationName: string;
+  pageSize: number;
   useCursor: boolean;
   request: LinkdapiPaginatedRequest<T>;
   selectItems: (data: T) => TItem[];
