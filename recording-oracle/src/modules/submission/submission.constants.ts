@@ -42,7 +42,13 @@ export const SOCIAL_PROFILE_NORMALIZERS: SocialProfileNormalizer[] = [
       return null;
     },
     isValid: (profile: string): boolean =>
-      /^[a-z0-9][a-z0-9_-]{0,99}$/.test(profile),
+      /^[a-z0-9](?:[a-z0-9._-]{0,98}[a-z0-9])?$/.test(profile),
+  },
+  {
+    normalize: (profile: string): string | null =>
+      profile.trim().replace(/\s+/g, ' ').toLowerCase(),
+    isValid: (profile: string): boolean =>
+      /^[\p{L}\p{N}](?:[\p{L}\p{N} .'-]{0,98}[\p{L}\p{N}])$/u.test(profile),
   },
 ];
 

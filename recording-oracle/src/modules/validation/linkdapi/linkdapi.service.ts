@@ -55,8 +55,8 @@ export class LinkdapiService {
     }
 
     const targetUsers = new Set(
-      submissions.map((submission) =>
-        this.normalizeSubmittedProfile(submission.solution),
+      submissions.flatMap((submission) =>
+        this.getProfileMatchKeys(submission.solution),
       ),
     );
     const matches = {
@@ -84,14 +84,17 @@ export class LinkdapiService {
       }
 
       return submissions.map((submission) => {
-        const user = this.normalizeSubmittedProfile(submission.solution);
+        const userKeys = this.getProfileMatchKeys(submission.solution);
         let rejectionReason: SubmissionRejectionReason | null = null;
 
-        if (manifest.requirements.checkLike && !matches.likingUsers.has(user)) {
+        if (
+          manifest.requirements.checkLike &&
+          !userKeys.some((user) => matches.likingUsers.has(user))
+        ) {
           rejectionReason = SubmissionRejectionReason.MissingRequiredLike;
         } else if (
           manifest.requirements.checkComment &&
-          !matches.commentingUsers.has(user)
+          !userKeys.some((user) => matches.commentingUsers.has(user))
         ) {
           rejectionReason = SubmissionRejectionReason.MissingRequiredComment;
         }
@@ -128,6 +131,7 @@ export class LinkdapiService {
 
     const items = await this.requestPaginatedData({
       operationName: 'getPostLikes',
+      pageSize: 10,
       useCursor: false,
       request: ({ start }) =>
         api.getPostLikes(postUrn, start) as Promise<
@@ -152,6 +156,7 @@ export class LinkdapiService {
 
     const items = await this.requestPaginatedData({
       operationName: 'getPostComments',
+      pageSize: this.linkdapiConfigService.pageSize,
       useCursor: true,
       request: ({ start, cursor }) =>
         api.getPostComments(
@@ -167,8 +172,13 @@ export class LinkdapiService {
     return this.getMatchingUsers(items, targetUsers);
   }
 
+  getTargetPostUrn(postUrl?: string): string | null {
+    return this.extractPostUrn(postUrl);
+  }
+
   private async requestPaginatedData<T extends LinkdapiPaginatedData, TItem>({
     operationName,
+    pageSize,
     useCursor,
     request,
     selectItems,
@@ -187,6 +197,10 @@ export class LinkdapiService {
         const payload = await request({ start, cursor });
 
         if (payload.success === false) {
+          if (allItems.length > 0) {
+            return allItems;
+          }
+
           const details = payload.message ?? payload.detail;
           throw new ServerError(
             details
@@ -228,11 +242,21 @@ export class LinkdapiService {
           typeof cursorValue === 'string' && cursorValue.length > 0
             ? cursorValue
             : null;
+        const currentPage =
+          typeof record.currentPage === 'number' ? record.currentPage : null;
+        const pages = typeof record.pages === 'number' ? record.pages : null;
+
+        if (
+          items.length < pageSize ||
+          (currentPage !== null && pages !== null && currentPage >= pages)
+        ) {
+          break;
+        }
 
         if (useCursor && nextCursor && nextCursor !== cursor) {
           cursor = nextCursor;
         } else {
-          start += items.length;
+          start += pageSize;
           cursor = '';
         }
       }
@@ -245,6 +269,10 @@ export class LinkdapiService {
 
       if (error instanceof HTTPError) {
         if (error.statusCode === 404) {
+          if (allItems.length > 0) {
+            return allItems;
+          }
+
           throw new ValidationError(
             SubmissionRejectionReason.TargetPostNotFound,
           );
@@ -317,9 +345,11 @@ export class LinkdapiService {
           return;
         }
 
-        const normalizedKey = this.normalizeSubmittedProfile(key);
-        if (targetUsers.has(normalizedKey)) {
-          matches.add(normalizedKey);
+        const matchedKey = this.getProfileMatchKeys(key).find((matchKey) =>
+          targetUsers.has(matchKey),
+        );
+        if (matchedKey) {
+          matches.add(matchedKey);
         }
       });
     }
@@ -360,7 +390,13 @@ export class LinkdapiService {
 
   private normalizeSubmittedProfile(value: string): string {
     const slug = this.profileFromUrl(value);
-    return (slug ?? value).trim().toLowerCase();
+    return (slug ?? value).trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  private getProfileMatchKeys(value: string): string[] {
+    const normalizedValue = this.normalizeSubmittedProfile(value);
+    const withoutSpaces = normalizedValue.replace(/\s+/g, '');
+    return [...new Set([normalizedValue, withoutSpaces])];
   }
 
   private ensureApi(): LinkdAPI {

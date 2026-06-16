@@ -147,6 +147,72 @@ describe('SubmissionService', () => {
           }),
         );
       });
+
+      it('creates an engagement submission with a normalized LinkedIn profile URL containing periods', async () => {
+        jobService.createJob.mockResolvedValue(
+          generateJob({ jobType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT }),
+        );
+
+        await expect(
+          submissionService.createSubmission({
+            ...webhook,
+            eventData: {
+              assigneeId: workerAddress,
+              solution: 'https://www.linkedin.com/in/Human.Protocol/',
+            },
+          }),
+        ).resolves.toBe('Submission received.');
+
+        expect(submissionRepository.createUnique).toHaveBeenCalledWith(
+          expect.objectContaining({
+            solution: 'human.protocol',
+          }),
+        );
+      });
+
+      it('creates an engagement submission with a normalized LinkedIn profile slug', async () => {
+        jobService.createJob.mockResolvedValue(
+          generateJob({ jobType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT }),
+        );
+
+        await expect(
+          submissionService.createSubmission({
+            ...webhook,
+            eventData: {
+              assigneeId: workerAddress,
+              solution: 'Human.Protocol',
+            },
+          }),
+        ).resolves.toBe('Submission received.');
+
+        expect(submissionRepository.createUnique).toHaveBeenCalledWith(
+          expect.objectContaining({
+            solution: 'human.protocol',
+          }),
+        );
+      });
+
+      it('creates an engagement submission with a normalized LinkedIn display name', async () => {
+        jobService.createJob.mockResolvedValue(
+          generateJob({ jobType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT }),
+        );
+
+        await expect(
+          submissionService.createSubmission({
+            ...webhook,
+            eventData: {
+              assigneeId: workerAddress,
+              solution: 'Oriol   Blanch',
+            },
+          }),
+        ).resolves.toBe('Submission received.');
+
+        expect(submissionRepository.createUnique).toHaveBeenCalledWith(
+          expect.objectContaining({
+            solution: 'oriol blanch',
+          }),
+        );
+      });
     });
 
     describe('fail', () => {
@@ -173,6 +239,24 @@ describe('SubmissionService', () => {
         await expect(
           submissionService.createSubmission(webhook),
         ).rejects.toThrow(SubmissionRejectionReason.DuplicateSubmission);
+
+        expect(submissionRepository.createUnique).not.toHaveBeenCalled();
+      });
+
+      it('rejects invalid engagement submissions with a social profile message', async () => {
+        jobService.createJob.mockResolvedValue(
+          generateJob({ jobType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT }),
+        );
+
+        await expect(
+          submissionService.createSubmission({
+            ...webhook,
+            eventData: {
+              assigneeId: workerAddress,
+              solution: 'not @ valid profile!',
+            },
+          }),
+        ).rejects.toThrow(ErrorJob.InvalidSocialProfile);
 
         expect(submissionRepository.createUnique).not.toHaveBeenCalled();
       });
