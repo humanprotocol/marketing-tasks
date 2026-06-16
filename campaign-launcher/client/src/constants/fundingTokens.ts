@@ -1,0 +1,124 @@
+import { ChainId, NETWORKS } from '@human-protocol/sdk';
+
+import { EscrowFundToken, type EvmAddress } from '@/types';
+
+export type IERC20Token = {
+  address: EvmAddress;
+  decimals: number;
+  symbol: EscrowFundToken;
+};
+
+export const TOKEN_ADDRESSES: {
+  [chainId in ChainId]?: {
+    [token in EscrowFundToken]?: IERC20Token;
+  };
+} = {
+  [ChainId.MAINNET]: {
+    [EscrowFundToken.HMT]: {
+      address: NETWORKS[ChainId.MAINNET]!.hmtAddress as EvmAddress,
+      decimals: 18,
+      symbol: EscrowFundToken.HMT,
+    },
+    [EscrowFundToken.USDT]: {
+      address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+      decimals: 6,
+      symbol: EscrowFundToken.USDT,
+    },
+    [EscrowFundToken.USDC]: {
+      address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+      decimals: 6,
+      symbol: EscrowFundToken.USDC,
+    },
+  },
+  [ChainId.SEPOLIA]: {
+    [EscrowFundToken.HMT]: {
+      address: NETWORKS[ChainId.SEPOLIA]!.hmtAddress as EvmAddress,
+      decimals: 18,
+      symbol: EscrowFundToken.HMT,
+    },
+    [EscrowFundToken.USDT]: {
+      address: '0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0',
+      decimals: 6,
+      symbol: EscrowFundToken.USDT,
+    },
+    [EscrowFundToken.USDC]: {
+      address: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+      decimals: 6,
+      symbol: EscrowFundToken.USDC,
+    },
+  },
+  [ChainId.BSC_MAINNET]: {
+    [EscrowFundToken.HMT]: {
+      address: NETWORKS[ChainId.BSC_MAINNET]!.hmtAddress as EvmAddress,
+      decimals: 18,
+      symbol: EscrowFundToken.HMT,
+    },
+  },
+  [ChainId.POLYGON]: {
+    [EscrowFundToken.HMT]: {
+      address: NETWORKS[ChainId.POLYGON]!.hmtAddress as EvmAddress,
+      decimals: 18,
+      symbol: EscrowFundToken.HMT,
+    },
+    [EscrowFundToken.USDT0]: {
+      address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
+      decimals: 6,
+      symbol: EscrowFundToken.USDT0,
+    },
+  },
+  [ChainId.POLYGON_AMOY]: {
+    [EscrowFundToken.HMT]: {
+      address: NETWORKS[ChainId.POLYGON_AMOY]!.hmtAddress as EvmAddress,
+      decimals: 18,
+      symbol: EscrowFundToken.HMT,
+    },
+    [EscrowFundToken.USDC]: {
+      address: '0x41e94eb019c0762f9bfcf9fb1e58725bfb0e7582',
+      decimals: 6,
+      symbol: EscrowFundToken.USDC,
+    },
+  },
+  [ChainId.LOCALHOST]: {
+    [EscrowFundToken.HMT]: {
+      address: NETWORKS[ChainId.LOCALHOST]!.hmtAddress as EvmAddress,
+      decimals: 18,
+      symbol: EscrowFundToken.HMT,
+    },
+  },
+  [ChainId.BSC_TESTNET]: {
+    [EscrowFundToken.HMT]: {
+      address: NETWORKS[ChainId.BSC_TESTNET]!.hmtAddress as EvmAddress,
+      decimals: 18,
+      symbol: EscrowFundToken.HMT,
+    },
+    [EscrowFundToken.USDC]: {
+      address: '0x64544969ed7EBf5f083679233325356EbE738930',
+      decimals: 18,
+      symbol: EscrowFundToken.USDC,
+    },
+    [EscrowFundToken.USDT]: {
+      address: '0x66E972502A34A625828C544a1914E8D8cc2A9dE5',
+      decimals: 18,
+      symbol: EscrowFundToken.USDT,
+    },
+  },
+};
+
+export const getFundingTokenOptions = (chainId: ChainId): IERC20Token[] => {
+  return Object.values(TOKEN_ADDRESSES[chainId] || {}).filter(
+    (token): token is IERC20Token => Boolean(token)
+  );
+};
+
+export const getDefaultFundingToken = (
+  chainId: ChainId
+): EscrowFundToken => {
+  return getFundingTokenOptions(chainId)[0]?.symbol || EscrowFundToken.HMT;
+};
+
+export const getFundingTokenConfig = (
+  chainId: ChainId,
+  token: EscrowFundToken
+): IERC20Token | undefined => {
+  return TOKEN_ADDRESSES[chainId]?.[token];
+};

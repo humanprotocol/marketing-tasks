@@ -1,0 +1,60 @@
+import { type FC } from 'react';
+
+import WalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import { Button, type ButtonProps } from '@mui/material';
+
+import ResponsiveOverlay from '@/components/ResponsiveOverlay';
+import { useConnectWalletModal } from '@/hooks/useConnectWalletModal';
+
+import ConnectWalletContent from './ConnectWalletContent';
+
+type ConnectWalletProps = {
+  size?: ButtonProps['size'];
+};
+
+const ConnectWallet: FC<ConnectWalletProps> = ({ size = 'large' }) => {
+  const {
+    closeConnectWallet,
+    isConnecting,
+    isConnectWalletOpen,
+    openConnectWallet,
+  } = useConnectWalletModal();
+
+  return (
+    <>
+      <Button
+        variant="contained"
+        size={size}
+        color="error"
+        disabled={isConnecting}
+        onClick={openConnectWallet}
+        sx={{
+          color: 'white',
+          width: 'fit-content',
+          fontSize: 12,
+          gap: 1,
+        }}
+      >
+        <WalletIcon sx={{ width: 18, height: 18 }} />
+        Connect wallet
+      </Button>
+      <ResponsiveOverlay
+        open={isConnectWalletOpen}
+        onClose={closeConnectWallet}
+        desktopSx={{
+          width: 640,
+          height: 600,
+          maxHeight: 'calc(100dvh - 48px)',
+          px: 4,
+          py: 4,
+        }}
+        mobileSx={{ height: '85dvh', p: 2 }}
+        closeButtonSx={{ top: { xs: 16, md: 32 }, right: { xs: 16, md: 32 } }}
+      >
+        <ConnectWalletContent />
+      </ResponsiveOverlay>
+    </>
+  );
+};
+
+export default ConnectWallet;
