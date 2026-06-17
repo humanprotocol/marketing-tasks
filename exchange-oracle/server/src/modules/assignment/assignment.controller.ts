@@ -5,6 +5,7 @@ import {
   UseGuards,
   Request,
   Get,
+  Param,
   Query,
 } from '@nestjs/common';
 import {
@@ -18,6 +19,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt.auth';
 import { AssignmentService } from './assignment.service';
 import {
   AssignJobResponseDto,
+  AssignmentDetailsDto,
   AssignmentDto,
   CreateAssignmentDto,
   GetAssignmentsDto,
@@ -25,6 +27,7 @@ import {
 } from './assignment.dto';
 import { RequestWithUser } from '../../common/types/jwt';
 import { PageDto } from '../../common/pagination/pagination.dto';
+import { Public } from '../../common/decorators';
 
 @ApiTags('Assignment')
 @Controller('assignment')
@@ -100,6 +103,27 @@ export class AssignmentController {
       req.user.address,
       req.user.reputationNetwork,
     );
+  }
+
+  @ApiOperation({
+    summary: 'Get Assignment Details',
+    description: 'Endpoint to retrieve assignment details for the solution UI.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Assignment details retrieved successfully.',
+    type: AssignmentDetailsDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Assignment not found.',
+  })
+  @Public()
+  @Get(':assignmentId/details')
+  getAssignmentDetails(
+    @Param('assignmentId') assignmentId: string,
+  ): Promise<AssignmentDetailsDto> {
+    return this.assignmentService.getAssignmentDetails(Number(assignmentId));
   }
 
   @ApiOperation({

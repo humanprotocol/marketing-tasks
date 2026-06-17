@@ -138,6 +138,41 @@ export class AssignmentDto {
   }
 }
 
+export class AssignmentDetailsDto extends AssignmentDto {
+  @ApiProperty({ name: 'job_description' })
+  jobDescription: string;
+
+  @ApiProperty({ isArray: true })
+  platforms: string[];
+
+  @ApiProperty()
+  requirements: Record<string, unknown>;
+
+  constructor(
+    assignment: AssignmentDto,
+    jobDescription: string,
+    platforms: string[],
+    requirements: Record<string, unknown>,
+  ) {
+    super(
+      assignment.assignmentId,
+      assignment.escrowAddress,
+      assignment.chainId,
+      assignment.jobType,
+      assignment.status,
+      assignment.rewardAmount,
+      assignment.rewardToken,
+      assignment.createdAt,
+      assignment.expiresAt,
+      assignment.updatedAt ?? '',
+    );
+    this.url = assignment.url;
+    this.jobDescription = jobDescription;
+    this.platforms = platforms;
+    this.requirements = requirements;
+  }
+}
+
 export class ResignDto {
   @ApiProperty({ name: 'assignment_id' })
   @IsString()

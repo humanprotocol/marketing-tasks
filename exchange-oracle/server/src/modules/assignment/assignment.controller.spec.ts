@@ -94,6 +94,34 @@ describe('assignmentController', () => {
     });
   });
 
+  describe('getAssignmentDetails', () => {
+    it('should call assignmentService.getAssignmentDetails', async () => {
+      const assignmentDetails = {
+        assignmentId: '123',
+        escrowAddress,
+        chainId: 80002,
+        jobType: JobType.SOCIAL_MEDIA_ENGAGEMENT,
+        status: AssignmentStatus.ACTIVE,
+        rewardAmount: 1,
+        rewardToken: 'HMT',
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        jobDescription: 'Like the target X post.',
+        platforms: ['x'],
+        requirements: { targetPostUrl: 'https://x.com/test/status/123' },
+      };
+      jest
+        .spyOn(assignmentService, 'getAssignmentDetails')
+        .mockResolvedValue(assignmentDetails);
+
+      const result = await assignmentController.getAssignmentDetails('123');
+
+      expect(result).toBe(assignmentDetails);
+      expect(assignmentService.getAssignmentDetails).toHaveBeenCalledWith(123);
+    });
+  });
+
   describe('resignJob', () => {
     describe('succeed', () => {
       it('should call jobService.resignJob', async () => {
