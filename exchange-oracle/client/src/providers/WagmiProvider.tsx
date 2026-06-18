@@ -7,6 +7,20 @@ import { LOCALHOST } from '../constants/chains';
 
 const projectId = import.meta.env.VITE_APP_WALLETCONNECT_PROJECT_ID;
 
+const connectors = [
+  ...(projectId
+    ? [
+        walletConnect({
+          showQrModal: true,
+          projectId,
+        }),
+      ]
+    : []),
+  coinbaseWallet({
+    appName: 'human-job-launcher',
+  }),
+];
+
 export const wagmiConfig = createConfig({
   chains: [
     wagmiChains.mainnet,
@@ -23,15 +37,7 @@ export const wagmiConfig = createConfig({
     wagmiChains.xLayerTestnet,
     LOCALHOST,
   ],
-  connectors: [
-    walletConnect({
-      showQrModal: true,
-      projectId: projectId ?? '',
-    }),
-    coinbaseWallet({
-      appName: 'human-job-launcher',
-    }),
-  ],
+  connectors,
   transports: {
     [wagmiChains.mainnet.id]: http(),
     [wagmiChains.sepolia.id]: http(),
