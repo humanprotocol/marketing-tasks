@@ -1,5 +1,5 @@
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import SendIcon from "@mui/icons-material/Send";
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import SendIcon from '@mui/icons-material/Send';
 import {
   Alert,
   Box,
@@ -11,13 +11,13 @@ import {
   Stack,
   TextField,
   Typography,
-} from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
-import { useSnackbar } from "../../providers/SnackProvider";
-import { useAccount, useWalletClient } from "wagmi";
-import * as jobService from "../../services/job";
-import type { AssignmentDetails } from "../../services/job";
+} from '@mui/material';
+import { useEffect, useMemo, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { useSnackbar } from '../../providers/SnackProvider';
+import { useAccount, useWalletClient } from 'wagmi';
+import * as jobService from '../../services/job';
+import type { AssignmentDetails } from '../../services/job';
 
 type SolutionCopy = {
   title: string;
@@ -36,12 +36,12 @@ const getBooleanRequirementLabels = (
   requirements: Record<string, unknown>,
 ): string[] => {
   const labels: Array<[string, string]> = [
-    ["checkLike", "Like"],
-    ["checkRepost", "Repost"],
-    ["checkQuote", "Quote"],
-    ["checkComment", "Comment"],
-    ["requiresMedia", "Media required"],
-    ["mustBePublic", "Public post"],
+    ['checkLike', 'Like'],
+    ['checkRepost', 'Repost'],
+    ['checkQuote', 'Quote'],
+    ['checkComment', 'Comment'],
+    ['requiresMedia', 'Media required'],
+    ['mustBePublic', 'Public post'],
   ];
 
   return labels
@@ -50,9 +50,9 @@ const getBooleanRequirementLabels = (
 };
 
 const getPlatformLabel = (platform?: string): string => {
-  if (!platform) return "Social";
-  if (platform.toLowerCase() === "x") return "X";
-  if (platform.toLowerCase() === "linkedin") return "LinkedIn";
+  if (!platform) return 'Social';
+  if (platform.toLowerCase() === 'x') return 'X';
+  if (platform.toLowerCase() === 'linkedin') return 'LinkedIn';
   return platform;
 };
 
@@ -63,7 +63,7 @@ const getStringListRequirement = (
   const value = requirements[key];
 
   return Array.isArray(value) && value.length > 0
-    ? value.map(String).join(", ")
+    ? value.map(String).join(', ')
     : null;
 };
 
@@ -73,7 +73,7 @@ const getPositiveNumberRequirement = (
 ): string | null => {
   const value = requirements[key];
 
-  return typeof value === "number" && value > 0 ? value.toString() : null;
+  return typeof value === 'number' && value > 0 ? value.toString() : null;
 };
 
 const getPostRequirementItems = (
@@ -82,70 +82,70 @@ const getPostRequirementItems = (
   const items: RequirementItem[] = [];
   const requiredHashtags = getStringListRequirement(
     requirements,
-    "requiredHashtags",
+    'requiredHashtags',
   );
   const requiredKeywords = getStringListRequirement(
     requirements,
-    "requiredKeywords",
+    'requiredKeywords',
   );
   const requiredLink =
-    typeof requirements.requiredLink === "string"
+    typeof requirements.requiredLink === 'string'
       ? requirements.requiredLink
       : null;
-  const minLength = getPositiveNumberRequirement(requirements, "minLength");
+  const minLength = getPositiveNumberRequirement(requirements, 'minLength');
   const minLiveDurationHours = getPositiveNumberRequirement(
     requirements,
-    "minLiveDurationHours",
+    'minLiveDurationHours',
   );
   const minFollowers = getPositiveNumberRequirement(
     requirements,
-    "minFollowers",
+    'minFollowers',
   );
   const minAccountAgeDays = getPositiveNumberRequirement(
     requirements,
-    "minAccountAgeDays",
+    'minAccountAgeDays',
   );
-  const minLikes = getPositiveNumberRequirement(requirements, "minLikes");
-  const minReposts = getPositiveNumberRequirement(requirements, "minReposts");
+  const minLikes = getPositiveNumberRequirement(requirements, 'minLikes');
+  const minReposts = getPositiveNumberRequirement(requirements, 'minReposts');
 
   if (requiredHashtags) {
-    items.push({ label: "Hashtags", value: requiredHashtags });
+    items.push({ label: 'Hashtags', value: requiredHashtags });
   }
   if (requiredKeywords) {
-    items.push({ label: "Keywords", value: requiredKeywords });
+    items.push({ label: 'Keywords', value: requiredKeywords });
   }
   if (requiredLink) {
-    items.push({ label: "Link", value: requiredLink });
+    items.push({ label: 'Link', value: requiredLink });
   }
   if (minLength) {
-    items.push({ label: "Minimum length", value: `${minLength} characters` });
+    items.push({ label: 'Minimum length', value: `${minLength} characters` });
   }
   if (requirements.requiresMedia === true) {
-    items.push({ label: "Media", value: "Required" });
+    items.push({ label: 'Media', value: 'Required' });
   }
   if (requirements.mustBePublic === true) {
-    items.push({ label: "Visibility", value: "Public post required" });
+    items.push({ label: 'Visibility', value: 'Public post required' });
   }
   if (minLiveDurationHours) {
     items.push({
-      label: "Live duration",
+      label: 'Live duration',
       value: `${minLiveDurationHours} hours`,
     });
   }
   if (minFollowers) {
-    items.push({ label: "Followers", value: `At least ${minFollowers}` });
+    items.push({ label: 'Followers', value: `At least ${minFollowers}` });
   }
   if (minAccountAgeDays) {
     items.push({
-      label: "Account age",
+      label: 'Account age',
       value: `At least ${minAccountAgeDays} days`,
     });
   }
   if (minLikes) {
-    items.push({ label: "Likes", value: `At least ${minLikes}` });
+    items.push({ label: 'Likes', value: `At least ${minLikes}` });
   }
   if (minReposts) {
-    items.push({ label: "Reposts", value: `At least ${minReposts}` });
+    items.push({ label: 'Reposts', value: `At least ${minReposts}` });
   }
 
   return items;
@@ -156,53 +156,53 @@ const getSolutionCopy = (
 ): SolutionCopy => {
   const platform = assignment?.platforms?.[0]?.toLowerCase();
 
-  if (assignment?.jobType === "social_media_engagement") {
-    if (platform === "x") {
+  if (assignment?.jobType === 'social_media_engagement') {
+    if (platform === 'x') {
       return {
-        title: "Submit X Engagement",
-        inputLabel: "X handle",
-        inputPlaceholder: "@human_protocol",
-        helperText: "Enter the X username that engaged with the target post.",
-        submitLabel: "Submit handle",
+        title: 'Submit X Engagement',
+        inputLabel: 'X handle',
+        inputPlaceholder: '@human_protocol',
+        helperText: 'Enter the X username that engaged with the target post.',
+        submitLabel: 'Submit handle',
       };
     }
 
-    if (platform === "linkedin") {
+    if (platform === 'linkedin') {
       return {
-        title: "Submit LinkedIn Engagement",
-        inputLabel: "LinkedIn profile name",
-        inputPlaceholder: "John Doe",
+        title: 'Submit LinkedIn Engagement',
+        inputLabel: 'LinkedIn profile name',
+        inputPlaceholder: 'John Doe',
         helperText:
-          "Enter the display name from the LinkedIn profile, not the profile URL.",
-        submitLabel: "Submit name",
+          'Enter the display name from the LinkedIn profile, not the profile URL.',
+        submitLabel: 'Submit name',
       };
     }
 
     return {
-      title: "Submit Engagement",
-      inputLabel: "Social profile",
-      inputPlaceholder: "Your profile handle or URL",
-      helperText: "Enter the profile that completed the required engagement.",
-      submitLabel: "Submit profile",
+      title: 'Submit Engagement',
+      inputLabel: 'Social profile',
+      inputPlaceholder: 'Your profile handle or URL',
+      helperText: 'Enter the profile that completed the required engagement.',
+      submitLabel: 'Submit profile',
     };
   }
 
-  if (platform === "linkedin") {
+  if (platform === 'linkedin') {
     return {
-      title: "Submit LinkedIn Post",
-      inputLabel: "Post URL",
-      inputPlaceholder: "https://www.linkedin.com/posts/...",
-      helperText: "Paste the public LinkedIn post URL for this assignment.",
-      submitLabel: "Submit post",
+      title: 'Submit LinkedIn Post',
+      inputLabel: 'Post URL',
+      inputPlaceholder: 'https://www.linkedin.com/posts/...',
+      helperText: 'Paste the public LinkedIn post URL for this assignment.',
+      submitLabel: 'Submit post',
     };
   }
 
   return {
-    title: "Submit X Post",
-    inputLabel: "Post URL",
-    inputPlaceholder: "https://x.com/username/status/123",
-    helperText: "Paste the public X post URL for this assignment.",
-    submitLabel: "Submit post",
+    title: 'Submit X Post',
+    inputLabel: 'Post URL',
+    inputPlaceholder: 'https://x.com/username/status/123',
+    helperText: 'Paste the public X post URL for this assignment.',
+    submitLabel: 'Submit post',
   };
 };
 
@@ -228,7 +228,7 @@ const SolutionForm: React.FC = () => {
       enabled: isConnected && !!address && !!connector,
     },
   });
-  const [solution, setSolution] = useState("");
+  const [solution, setSolution] = useState('');
   const [assignment, setAssignment] = useState<AssignmentDetails | null>(null);
   const [isLoadingAssignment, setIsLoadingAssignment] = useState(true);
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
@@ -237,14 +237,14 @@ const SolutionForm: React.FC = () => {
   const platformLabel = getPlatformLabel(assignment?.platforms?.[0]);
   const requirementLabels = useMemo(
     () =>
-      assignment?.jobType === "social_media_engagement"
+      assignment?.jobType === 'social_media_engagement'
         ? getBooleanRequirementLabels(assignment.requirements)
         : [],
     [assignment],
   );
   const isXPromotionSubmission =
-    assignment?.jobType === "social_media_promotion" &&
-    (assignment.platforms?.[0]?.toLowerCase() ?? "x") === "x";
+    assignment?.jobType === 'social_media_promotion' &&
+    (assignment.platforms?.[0]?.toLowerCase() ?? 'x') === 'x';
   const postRequirementItems = useMemo(
     () =>
       assignment && isXPromotionSubmission
@@ -253,23 +253,23 @@ const SolutionForm: React.FC = () => {
     [assignment, isXPromotionSubmission],
   );
   const targetPostUrl =
-    typeof assignment?.requirements.targetPostUrl === "string"
+    typeof assignment?.requirements.targetPostUrl === 'string'
       ? assignment.requirements.targetPostUrl
       : null;
   const manifestUrl = assignment?.manifestUrl ?? null;
   const isLinkedInEngagementSubmission =
-    assignment?.jobType === "social_media_engagement" &&
-    assignment.platforms?.[0]?.toLowerCase() === "linkedin";
+    assignment?.jobType === 'social_media_engagement' &&
+    assignment.platforms?.[0]?.toLowerCase() === 'linkedin';
   const hasInvalidLinkedInName =
     isLinkedInEngagementSubmission && isUrlLikeValue(solution);
   const solutionHelperText = hasInvalidLinkedInName
-    ? "Submit the LinkedIn profile name, for example John Doe. Do not submit a URL."
+    ? 'Submit the LinkedIn profile name, for example John Doe. Do not submit a URL.'
     : copy.helperText;
 
   type SnackbarApi = {
     openSnackbar: (
       message: string,
-      severity?: "success" | "error" | "info" | "warning",
+      severity?: 'success' | 'error' | 'info' | 'warning',
     ) => void;
     showError: (error: unknown) => void;
   };
@@ -282,7 +282,7 @@ const SolutionForm: React.FC = () => {
     const loadAssignment = async () => {
       if (!assignmentId) {
         setIsLoadingAssignment(false);
-        setAssignmentError("Missing assignment id");
+        setAssignmentError('Missing assignment id');
         return;
       }
 
@@ -295,7 +295,7 @@ const SolutionForm: React.FC = () => {
         }
       } catch {
         if (isMounted) {
-          setAssignmentError("Assignment details could not be loaded.");
+          setAssignmentError('Assignment details could not be loaded.');
         }
       } finally {
         if (isMounted) {
@@ -313,17 +313,17 @@ const SolutionForm: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!signer) {
-      openSnackbar("Please connect your wallet first", "error");
+      openSnackbar('Please connect your wallet first', 'error');
       return;
     }
 
     if (!assignmentId) {
-      openSnackbar("Missing assignment id", "error");
+      openSnackbar('Missing assignment id', 'error');
       return;
     }
 
     if (hasInvalidLinkedInName) {
-      openSnackbar("Submit the LinkedIn profile name, not a URL", "error");
+      openSnackbar('Submit the LinkedIn profile name, not a URL', 'error');
       return;
     }
 
@@ -335,7 +335,7 @@ const SolutionForm: React.FC = () => {
     try {
       await jobService.solveJob(signer, message);
 
-      openSnackbar("Solution sent successfully", "success");
+      openSnackbar('Solution sent successfully', 'success');
     } catch (error) {
       showError(error);
     }
@@ -347,10 +347,10 @@ const SolutionForm: React.FC = () => {
       maxWidth="680px"
       sx={{
         p: { xs: 3, sm: 4 },
-        background: "#271f4f",
-        border: "1px solid #3f3569",
-        borderRadius: "8px",
-        boxShadow: "none",
+        background: '#271f4f',
+        border: '1px solid #3f3569',
+        borderRadius: '8px',
+        boxShadow: 'none',
       }}
     >
       {isLoadingAssignment ? (
@@ -366,7 +366,7 @@ const SolutionForm: React.FC = () => {
 
           <Box>
             <Stack
-              direction={{ xs: "column", sm: "row" }}
+              direction={{ xs: 'column', sm: 'row' }}
               justifyContent="space-between"
               spacing={1.5}
             >
@@ -383,9 +383,9 @@ const SolutionForm: React.FC = () => {
                   <Chip
                     size="small"
                     label={
-                      assignment.jobType === "social_media_engagement"
-                        ? "Engagement"
-                        : "Promotion"
+                      assignment.jobType === 'social_media_engagement'
+                        ? 'Engagement'
+                        : 'Promotion'
                     }
                   />
                 )}
@@ -394,7 +394,7 @@ const SolutionForm: React.FC = () => {
             </Stack>
 
             {assignment?.jobDescription && (
-              <Box sx={{ mt: 2, textAlign: "left" }}>
+              <Box sx={{ mt: 2, textAlign: 'left' }}>
                 <Typography
                   component="span"
                   variant="body2"
@@ -421,11 +421,11 @@ const SolutionForm: React.FC = () => {
             postRequirementItems.length > 0) && (
             <Box
               sx={{
-                background: "#211947",
-                border: "1px solid #3f3569",
-                borderRadius: "8px",
+                background: '#211947',
+                border: '1px solid #3f3569',
+                borderRadius: '8px',
                 p: 2,
-                textAlign: "left",
+                textAlign: 'left',
               }}
             >
               <Stack spacing={1.5}>
@@ -440,10 +440,10 @@ const SolutionForm: React.FC = () => {
                       gap={0.75}
                       color="primary"
                       sx={{
-                        color: "#c7bdff",
+                        color: '#c7bdff',
                         fontWeight: 800,
-                        wordBreak: "break-word",
-                        "&:hover": { color: "#ffffff" },
+                        wordBreak: 'break-word',
+                        '&:hover': { color: '#ffffff' },
                       }}
                     >
                       Target post
@@ -465,7 +465,7 @@ const SolutionForm: React.FC = () => {
                       {postRequirementItems.map((item) => (
                         <Stack
                           key={item.label}
-                          direction={{ xs: "column", sm: "row" }}
+                          direction={{ xs: 'column', sm: 'row' }}
                           spacing={{ xs: 0.25, sm: 1 }}
                         >
                           <Typography
@@ -480,7 +480,7 @@ const SolutionForm: React.FC = () => {
                             variant="body2"
                             color="text.primary"
                             fontWeight={700}
-                            sx={{ wordBreak: "break-word" }}
+                            sx={{ wordBreak: 'break-word' }}
                           >
                             {item.value}
                           </Typography>
@@ -552,11 +552,11 @@ const SolutionForm: React.FC = () => {
               target="_blank"
               rel="noreferrer"
               sx={{
-                alignSelf: "center",
-                color: "#9b91d4",
-                fontSize: "14px",
+                alignSelf: 'center',
+                color: '#9b91d4',
+                fontSize: '14px',
                 fontWeight: 700,
-                "&:hover": { color: "#ffffff" },
+                '&:hover': { color: '#ffffff' },
               }}
             >
               manifest

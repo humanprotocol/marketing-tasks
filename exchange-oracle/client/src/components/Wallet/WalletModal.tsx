@@ -1,5 +1,5 @@
-import CloseIcon from "@mui/icons-material/Close";
-import SearchIcon from "@mui/icons-material/Search";
+import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
 import {
   Box,
   Button,
@@ -12,17 +12,17 @@ import {
   Stack,
   Typography,
   useMediaQuery,
-} from "@mui/material";
-import { useMemo, useState } from "react";
+} from '@mui/material';
+import { useMemo, useState } from 'react';
 import {
   useConnect,
   useConnectors,
   useDisconnect,
   type Connector,
-} from "wagmi";
-import coinbaseSvg from "../../assets/coinbase.svg";
-import metaMaskSvg from "../../assets/metamask.svg";
-import walletConnectSvg from "../../assets/walletconnect.svg";
+} from 'wagmi';
+import coinbaseSvg from '../../assets/coinbase.svg';
+import metaMaskSvg from '../../assets/metamask.svg';
+import walletConnectSvg from '../../assets/walletconnect.svg';
 
 const WALLET_ICONS: Record<string, string> = {
   metaMask: metaMaskSvg,
@@ -47,7 +47,7 @@ export default function WalletModal({
   const [connectingConnectorId, setConnectingConnectorId] = useState<
     string | null
   >(null);
-  const isMobile = useMediaQuery("(max-width: 900px)");
+  const isMobile = useMediaQuery('(max-width: 900px)');
 
   const displayedConnectors = useMemo(
     () => (showAllWallets ? connectors : connectors.slice(0, 6)),
@@ -61,7 +61,7 @@ export default function WalletModal({
     setConnectingConnectorId(connector.id);
 
     try {
-      if (connector.id === "walletConnect") {
+      if (connector.id === 'walletConnect') {
         onClose();
       }
 
@@ -70,34 +70,34 @@ export default function WalletModal({
     } catch (e) {
       const err = e as { message?: string };
 
-      if (err.message?.includes("Connector already connected")) {
+      if (err.message?.includes('Connector already connected')) {
         await disconnectAsync();
         await handleConnect(connector);
         return;
       }
 
-      setError(err.message ?? "Unable to connect wallet");
+      setError(err.message ?? 'Unable to connect wallet');
     } finally {
       setConnectingConnectorId(null);
     }
   };
 
   const content = (
-    <Stack sx={{ height: "100%", minHeight: 0 }}>
-      <Typography variant="h6" sx={{ color: "white", mb: 1 }}>
+    <Stack sx={{ height: '100%', minHeight: 0 }}>
+      <Typography variant="h6" sx={{ color: 'white', mb: 1 }}>
         Connect Wallet
       </Typography>
       <Typography
         variant="body2"
-        sx={{ color: "text.primary", fontWeight: 500, mb: 3, pr: 5 }}
+        sx={{ color: 'text.primary', fontWeight: 500, mb: 3, pr: 5 }}
       >
         Connect your wallet to continue and submit your solution.
       </Typography>
       <Box
         sx={{
           minHeight: 0,
-          height: "100%",
-          overflowY: "auto",
+          height: '100%',
+          overflowY: 'auto',
           pr: 0.5,
           pb: 2,
         }}
@@ -114,21 +114,21 @@ export default function WalletModal({
                     void handleConnect(connector);
                   }}
                   sx={{
-                    alignItems: "center",
-                    border: "1px solid",
-                    borderColor: "rgba(205, 199, 255, 0.22)",
-                    borderRadius: "8px",
-                    color: "white",
-                    display: "flex",
-                    flexDirection: "column",
+                    alignItems: 'center',
+                    border: '1px solid',
+                    borderColor: 'rgba(205, 199, 255, 0.22)',
+                    borderRadius: '8px',
+                    color: 'white',
+                    display: 'flex',
+                    flexDirection: 'column',
                     gap: 1.5,
                     height: 132,
-                    justifyContent: "center",
+                    justifyContent: 'center',
                     p: 2,
-                    width: "100%",
-                    "&:hover": {
-                      bgcolor: "rgba(205, 199, 255, 0.08)",
-                      borderColor: "rgba(205, 199, 255, 0.45)",
+                    width: '100%',
+                    '&:hover': {
+                      bgcolor: 'rgba(205, 199, 255, 0.08)',
+                      borderColor: 'rgba(205, 199, 255, 0.45)',
                     },
                   }}
                 >
@@ -142,7 +142,7 @@ export default function WalletModal({
                       sx={{
                         borderRadius: 1.5,
                         height: 48,
-                        objectFit: "contain",
+                        objectFit: 'contain',
                         width: 48,
                       }}
                     />
@@ -150,11 +150,11 @@ export default function WalletModal({
                   <Typography
                     variant="body2"
                     sx={{
-                      color: "white",
-                      maxWidth: "100%",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
+                      color: 'white',
+                      maxWidth: '100%',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     {connector.name}
@@ -173,14 +173,14 @@ export default function WalletModal({
       <Stack
         direction="row"
         sx={{
-          alignItems: "center",
+          alignItems: 'center',
           gap: 1,
-          justifyContent: "center",
-          mt: "auto",
+          justifyContent: 'center',
+          mt: 'auto',
           mx: { xs: -2, md: -4 },
           pt: 2,
           px: 2,
-          borderTop: "1px solid #433679",
+          borderTop: '1px solid #433679',
         }}
       >
         {!showAllWallets ? (
@@ -224,12 +224,12 @@ export default function WalletModal({
       onClick={onClose}
       sx={{
         p: 0,
-        color: "white",
-        position: "absolute",
+        color: 'white',
+        position: 'absolute',
         top: { xs: 16, md: 32 },
         right: { xs: 16, md: 32 },
-        "&:hover": {
-          bgcolor: "unset",
+        '&:hover': {
+          bgcolor: 'unset',
         },
       }}
     >
@@ -245,20 +245,20 @@ export default function WalletModal({
         onClose={onClose}
         PaperProps={{
           sx: {
-            bgcolor: "#251d47",
-            borderRadius: "20px 20px 0 0",
-            minHeight: "450px",
-            maxHeight: "550px",
-            overflowY: "hidden",
+            bgcolor: '#251d47',
+            borderRadius: '20px 20px 0 0',
+            minHeight: '450px',
+            maxHeight: '550px',
+            overflowY: 'hidden',
             p: 2,
-            position: "relative",
+            position: 'relative',
           },
         }}
         slotProps={{
           backdrop: {
             sx: {
-              backdropFilter: "blur(7px)",
-              background: "rgba(0, 0, 0, 0.3)",
+              backdropFilter: 'blur(7px)',
+              background: 'rgba(0, 0, 0, 0.3)',
             },
           },
         }}
@@ -274,16 +274,16 @@ export default function WalletModal({
       open={open}
       onClose={onClose}
       sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         mx: 0,
       }}
       slotProps={{
         backdrop: {
           sx: {
-            backdropFilter: "blur(7px)",
-            background: "rgba(0, 0, 0, 0.3)",
+            backdropFilter: 'blur(7px)',
+            background: 'rgba(0, 0, 0, 0.3)',
           },
         },
       }}
@@ -293,12 +293,12 @@ export default function WalletModal({
         sx={{
           width: 640,
           height: 600,
-          maxHeight: "calc(100dvh - 48px)",
-          overflowY: "hidden",
-          bgcolor: "#251d47",
-          borderRadius: "20px",
-          position: "relative",
-          boxShadow: "none",
+          maxHeight: 'calc(100dvh - 48px)',
+          overflowY: 'hidden',
+          bgcolor: '#251d47',
+          borderRadius: '20px',
+          position: 'relative',
+          boxShadow: 'none',
           px: 4,
           py: 4,
         }}
