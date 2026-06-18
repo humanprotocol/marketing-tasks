@@ -142,6 +142,9 @@ export class AssignmentDetailsDto extends AssignmentDto {
   @ApiProperty({ name: 'job_description' })
   jobDescription: string;
 
+  @ApiProperty({ name: 'manifest_url' })
+  manifestUrl: string;
+
   @ApiProperty({ isArray: true })
   platforms: string[];
 
@@ -151,6 +154,7 @@ export class AssignmentDetailsDto extends AssignmentDto {
   constructor(
     assignment: AssignmentDto,
     jobDescription: string,
+    manifestUrl: string,
     platforms: string[],
     requirements: Record<string, unknown>,
   ) {
@@ -168,6 +172,7 @@ export class AssignmentDetailsDto extends AssignmentDto {
     );
     this.url = assignment.url;
     this.jobDescription = jobDescription;
+    this.manifestUrl = manifestUrl;
     this.platforms = platforms;
     this.requirements = requirements;
   }

@@ -1,4 +1,4 @@
-import CloseIcon from '@mui/icons-material/Close';
+import CloseIcon from "@mui/icons-material/Close";
 import {
   Box,
   Button,
@@ -6,11 +6,11 @@ import {
   IconButton,
   Typography,
   useTheme,
-} from '@mui/material';
-import { useConnect } from 'wagmi';
-import coinbaseSvg from '../../assets/coinbase.svg';
-import metaMaskSvg from '../../assets/metamask.svg';
-import walletConnectSvg from '../../assets/walletconnect.svg';
+} from "@mui/material";
+import { useConnect } from "wagmi";
+import coinbaseSvg from "../../assets/coinbase.svg";
+import metaMaskSvg from "../../assets/metamask.svg";
+import walletConnectSvg from "../../assets/walletconnect.svg";
 
 const WALLET_ICONS: Record<string, any> = {
   metaMask: metaMaskSvg,
@@ -34,17 +34,26 @@ export default function WalletModal({
       open={open}
       onClose={onClose}
       maxWidth={false}
-      PaperProps={{ sx: { mx: 2, maxWidth: 'calc(100% - 32px)' } }}
+      PaperProps={{
+        sx: {
+          mx: 2,
+          maxWidth: "calc(100% - 32px)",
+          background: "#271f4f",
+          border: "1px solid #3f3569",
+          borderRadius: "8px",
+        },
+      }}
     >
       <Box display="flex" maxWidth="784px">
         <Box
-          width={{ xs: '0', md: '50%' }}
-          display={{ xs: 'none', md: 'flex' }}
+          width={{ xs: "0", md: "50%" }}
+          display={{ xs: "none", md: "flex" }}
           sx={{
-            background: theme.palette.primary.main,
-            boxSizing: 'border-box',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
+            background: "#211947",
+            boxSizing: "border-box",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            borderRight: "1px solid #3f3569",
           }}
           px={9}
           py={6}
@@ -53,43 +62,44 @@ export default function WalletModal({
             Connect
             <br /> your wallet
           </Typography>
-          <Typography color="text.secondary" variant="caption">
+          <Typography color="#9b91d4" variant="caption">
             By connecting a wallet, you agree to HUMAN Protocol Terms of Service
             and consent to its Privacy Policy.
           </Typography>
         </Box>
         <Box
-          sx={{ boxSizing: 'border-box' }}
-          width={{ xs: '100%', md: '50%' }}
-          minWidth={{ xs: '340px', sm: '392px' }}
+          sx={{ boxSizing: "border-box" }}
+          width={{ xs: "100%", md: "50%" }}
+          minWidth={{ xs: "340px", sm: "392px" }}
           display="flex"
           flexDirection="column"
           p={{ xs: 2, sm: 4 }}
         >
-          <IconButton sx={{ ml: 'auto', mb: 3 }} onClick={onClose}>
-            <CloseIcon color="primary" />
+          <IconButton sx={{ ml: "auto", mb: 3 }} onClick={onClose}>
+            <CloseIcon sx={{ color: "#c7bdff" }} />
           </IconButton>
           <Box width="100%" display="flex" flexDirection="column" gap={3}>
             {connectors.map((connector) => (
               <Button
                 sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
+                  display: "flex",
+                  justifyContent: "space-between",
                   px: 2,
                   py: 3,
-                  background: '#f6f7fe',
-                  color: theme.palette.text.secondary,
-                  border: `1px solid transparent`,
-                  '&:hover': {
-                    color: theme.palette.text.primary,
-                    border: `1px solid ${theme.palette.primary.main}`,
+                  background: "#211947",
+                  color: "#ffffff",
+                  border: "1px solid #3f3569",
+                  "&:hover": {
+                    color: "#ffffff",
+                    borderColor: theme.palette.primary.main,
+                    background: "#2d2457",
                   },
                 }}
                 key={connector.id}
                 onClick={() => {
                   connect({ connector });
 
-                  if (connector.id === 'walletConnect') {
+                  if (connector.id === "walletConnect") {
                     onClose();
                   }
                 }}

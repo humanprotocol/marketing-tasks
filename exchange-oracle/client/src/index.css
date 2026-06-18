@@ -1,4 +1,15 @@
+html,
+body,
+#root {
+  min-height: 100%;
+  background: #0d0433;
+}
+
+body {
+  margin: 0;
+}
+
 a {
-  color: #320a8d;
+  color: #c7bdff;
   text-decoration: none;
 }

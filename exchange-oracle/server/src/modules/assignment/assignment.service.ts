@@ -175,6 +175,7 @@ export class AssignmentService {
     return new AssignmentDetailsDto(
       assignment,
       manifest.campaign.description,
+      entity.job.manifestUrl,
       manifest.platforms,
       this.getPublicRequirements(manifest.requirements),
     );

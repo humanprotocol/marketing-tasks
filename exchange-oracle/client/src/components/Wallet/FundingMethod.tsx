@@ -1,9 +1,9 @@
-import { Box, Button, Grid, Typography } from '@mui/material';
-import { useEffect, useState } from 'react';
-import { useAccount } from 'wagmi';
-import fundCryptoImg from '../../assets/fund-crypto.png';
-import WalletModal from './WalletModal';
-import SolutionForm from '../SolutionForm';
+import { Box, Button, Stack, Typography } from "@mui/material";
+import { useEffect, useState } from "react";
+import { useAccount } from "wagmi";
+import fundCryptoImg from "../../assets/fund-crypto.png";
+import WalletModal from "./WalletModal";
+import SolutionForm from "../SolutionForm";
 
 export const FundingMethod = () => {
   const [walletModalOpen, setWalletModalOpen] = useState(false);
@@ -25,54 +25,60 @@ export const FundingMethod = () => {
   return (
     <>
       {isConnected ? (
-        <SolutionForm /> // Mostrar el formulario de solución si está conectado
+        <SolutionForm />
       ) : (
         <Box
-          width={{ xs: '100%', md: '50%' }}
-          minWidth={{ xs: '340px', sm: '392px' }}
+          width="100%"
+          maxWidth="680px"
           sx={{
-            p: 3,
-            background: '#fff',
-            borderRadius: '16px',
-            boxShadow:
-              '0px 1px 5px 0px rgba(233, 235, 250, 0.20), 0px 2px 2px 0px rgba(233, 235, 250, 0.50), 0px 3px 1px -2px #E9EBFA',
+            p: { xs: 3, sm: 4 },
+            background: "#271f4f",
+            border: "1px solid #3f3569",
+            borderRadius: "8px",
+            boxShadow: "none",
           }}
         >
-          <Grid container spacing={4}>
-            <Grid item xs={12}>
-              <Box
-                sx={{
-                  width: '100%',
-                  height: '100%',
-                  boxSizing: 'border-box',
-                  background: '#fbfbfe',
-                  borderRadius: '10px',
-                  textAlign: 'center',
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  alignItems: 'center',
-                  flexDirection: 'column',
-                  py: 8,
-                }}
+          <Stack alignItems="center" spacing={3} sx={{ textAlign: "center" }}>
+            <Box
+              sx={{
+                width: 112,
+                height: 112,
+                borderRadius: "8px",
+                background: "#211947",
+                border: "1px solid #3f3569",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <img
+                src={fundCryptoImg}
+                alt="crypto"
+                style={{ width: 78, height: "auto" }}
+              />
+            </Box>
+            <Box>
+              <Typography variant="h4" color="text.primary">
+                Connect Your Wallet
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 1, maxWidth: 420 }}
               >
-                <img
-                  src={fundCryptoImg}
-                  alt="crypto"
-                  style={{ width: 135, height: 'auto' }}
-                />
-                <Typography variant="body2" color="primary" mt={8}>
-                  Click to connect your wallet
-                </Typography>
-                <Button
-                  variant="outlined"
-                  sx={{ mt: 2.5, minWidth: '200px' }}
-                  onClick={handleClickCrypto}
-                >
-                  Crypto
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
+                Use the worker wallet assigned to this task before submitting
+                your solution.
+              </Typography>
+            </Box>
+            <Button
+              variant="contained"
+              size="large"
+              sx={{ minWidth: "200px" }}
+              onClick={handleClickCrypto}
+            >
+              Connect wallet
+            </Button>
+          </Stack>
         </Box>
       )}
       <WalletModal

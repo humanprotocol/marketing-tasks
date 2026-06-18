@@ -108,6 +108,7 @@ describe('assignmentController', () => {
         expiresAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         jobDescription: 'Like the target X post.',
+        manifestUrl: 'https://example.com/manifest.json',
         platforms: ['x'],
         requirements: { targetPostUrl: 'https://x.com/test/status/123' },
       };

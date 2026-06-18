@@ -17,6 +17,7 @@ export type AssignmentDetails = {
   expiresAt: string;
   updatedAt?: string;
   jobDescription: string;
+  manifestUrl: string;
   platforms: string[];
   requirements: Record<string, unknown>;
 };

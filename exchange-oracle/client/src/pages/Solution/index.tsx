@@ -9,11 +9,11 @@ const Solution: React.FC = () => {
   const { isConnected } = useAccount();
 
   return (
-    <Box>
+    <Box sx={{ minHeight: "100vh", background: "#0d0433" }}>
       <DefaultHeader />
       <Box
         sx={{
-          px: { sm: 4, md: 8, xl: 30 },
+          px: { xs: 3, sm: 4, md: 10 },
           py: { xs: 12, sm: 16 },
           display: "flex",
           justifyContent: "center",
@@ -22,6 +22,7 @@ const Solution: React.FC = () => {
         }}
       >
         <Container
+          maxWidth="lg"
           sx={{
             display: "flex",
             flexDirection: "column",
