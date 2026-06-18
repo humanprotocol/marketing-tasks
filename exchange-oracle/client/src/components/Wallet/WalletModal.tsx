@@ -2,17 +2,23 @@ import CloseIcon from "@mui/icons-material/Close";
 import {
   Box,
   Button,
-  Dialog,
   IconButton,
+  Modal,
+  Paper,
   Typography,
-  useTheme,
 } from "@mui/material";
-import { useConnect } from "wagmi";
+import { useState } from "react";
+import {
+  useConnect,
+  useConnectors,
+  useDisconnect,
+  type Connector,
+} from "wagmi";
 import coinbaseSvg from "../../assets/coinbase.svg";
 import metaMaskSvg from "../../assets/metamask.svg";
 import walletConnectSvg from "../../assets/walletconnect.svg";
 
-const WALLET_ICONS: Record<string, any> = {
+const WALLET_ICONS: Record<string, string> = {
   metaMask: metaMaskSvg,
   coinbaseWalletSDK: coinbaseSvg,
   walletConnect: walletConnectSvg,
@@ -25,97 +31,123 @@ export default function WalletModal({
   open: boolean;
   onClose: () => void;
 }) {
-  const { connect, connectors, error } = useConnect();
+  const { connectAsync } = useConnect();
+  const connectors = useConnectors();
+  const { disconnectAsync } = useDisconnect();
+  const [error, setError] = useState<string | null>(null);
 
-  const theme = useTheme();
+  const handleConnect = async (connector: Connector) => {
+    setError(null);
+
+    try {
+      await connectAsync({ connector });
+      onClose();
+    } catch (e) {
+      const err = e as { message?: string };
+
+      if (err.message?.includes("Connector already connected")) {
+        await disconnectAsync();
+        await handleConnect(connector);
+        return;
+      }
+
+      setError(err.message ?? "Unable to connect wallet");
+    }
+  };
 
   return (
-    <Dialog
+    <Modal
       open={open}
       onClose={onClose}
-      maxWidth={false}
-      PaperProps={{
-        sx: {
-          mx: 2,
-          maxWidth: "calc(100% - 32px)",
-          background: "#271f4f",
-          border: "1px solid #3f3569",
-          borderRadius: "8px",
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        mx: { xs: 4, md: 0 },
+      }}
+      slotProps={{
+        backdrop: {
+          sx: {
+            background:
+              "linear-gradient(180deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.13) 100%), rgba(16, 7, 53, 0.80)",
+          },
         },
       }}
     >
-      <Box display="flex" maxWidth="784px">
-        <Box
-          width={{ xs: "0", md: "50%" }}
-          display={{ xs: "none", md: "flex" }}
+      <Paper
+        elevation={4}
+        sx={{
+          py: 5,
+          px: { xs: 2, sm: 4 },
+          width: 320,
+          maxWidth: "100%",
+          maxHeight: "90vh",
+          overflowY: "auto",
+          bgcolor: "background.default",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          borderRadius: 4,
+          position: "relative",
+          boxShadow: "0px 0px 10px 0px rgba(255, 255, 255, 0.15)",
+        }}
+      >
+        <IconButton
+          onClick={onClose}
           sx={{
-            background: "#211947",
-            boxSizing: "border-box",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            borderRight: "1px solid #3f3569",
+            p: 0,
+            color: "primary.main",
+            position: "absolute",
+            top: "16px",
+            right: "16px",
+            "&:hover": {
+              bgcolor: "unset",
+            },
           }}
-          px={9}
-          py={6}
         >
-          <Typography variant="h4" fontWeight={600} color="#fff">
-            Connect
-            <br /> your wallet
-          </Typography>
-          <Typography color="#9b91d4" variant="caption">
-            By connecting a wallet, you agree to HUMAN Protocol Terms of Service
-            and consent to its Privacy Policy.
-          </Typography>
-        </Box>
+          <CloseIcon />
+        </IconButton>
         <Box
-          sx={{ boxSizing: "border-box" }}
-          width={{ xs: "100%", md: "50%" }}
-          minWidth={{ xs: "340px", sm: "392px" }}
+          width="100%"
           display="flex"
           flexDirection="column"
-          p={{ xs: 2, sm: 4 }}
+          gap={1}
+          mt={2}
         >
-          <IconButton sx={{ ml: "auto", mb: 3 }} onClick={onClose}>
-            <CloseIcon sx={{ color: "#c7bdff" }} />
-          </IconButton>
-          <Box width="100%" display="flex" flexDirection="column" gap={3}>
-            {connectors.map((connector) => (
-              <Button
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  px: 2,
-                  py: 3,
-                  background: "#211947",
-                  color: "#ffffff",
-                  border: "1px solid #3f3569",
-                  "&:hover": {
-                    color: "#ffffff",
-                    borderColor: theme.palette.primary.main,
-                    background: "#2d2457",
-                  },
-                }}
-                key={connector.id}
-                onClick={() => {
-                  connect({ connector });
-
-                  if (connector.id === "walletConnect") {
-                    onClose();
-                  }
-                }}
-              >
-                <img
-                  src={connector.icon ?? WALLET_ICONS[connector.id]}
-                  alt={connector.id}
-                />
-                <span>{connector.name}</span>
-              </Button>
-            ))}
-          </Box>
-
-          {error && <div>{error.message}</div>}
+          {connectors.map((connector) => (
+            <Button
+              key={connector.id}
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                px: 3,
+                py: 2,
+                bgcolor: "rgba(255, 255, 255, 0.09)",
+                color: "text.primary",
+                borderRadius: "4px",
+              }}
+              onClick={() => {
+                void handleConnect(connector);
+              }}
+            >
+              <img
+                src={connector.icon ?? WALLET_ICONS[connector.id]}
+                alt={connector.id}
+                width={24}
+                height={24}
+              />
+              <span>{connector.name}</span>
+            </Button>
+          ))}
         </Box>
-      </Box>
-    </Dialog>
+        <Typography color="text.primary" fontSize={11} mt={1.5}>
+          By connecting a wallet, you agree to HUMAN Protocol Terms of Service
+          and consent to its Privacy Policy.
+        </Typography>
+        {error && (
+          <Typography color="error.main" fontSize={12} mt={1.5}>
+            {error}
+          </Typography>
+        )}
+      </Paper>
+    </Modal>
   );
 }
