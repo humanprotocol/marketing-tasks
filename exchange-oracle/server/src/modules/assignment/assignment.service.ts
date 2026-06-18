@@ -223,10 +223,10 @@ export class AssignmentService {
   }
 
   private getPublicRequirements(requirements: object): Record<string, unknown> {
-    const { xApiCredentials, ...publicRequirements } = requirements as Record<
-      string,
-      unknown
-    >;
+    const publicRequirements = {
+      ...(requirements as Record<string, unknown>),
+    };
+    delete publicRequirements.xApiCredentials;
 
     return publicRequirements;
   }
