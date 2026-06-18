@@ -216,6 +216,22 @@ const isUrlLikeValue = (value: string): boolean => {
   );
 };
 
+const formatEndDate = (value?: string): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+};
+
 const SolutionForm: React.FC = () => {
   const { assignmentId } = useParams<{ assignmentId: string }>();
 
@@ -257,6 +273,7 @@ const SolutionForm: React.FC = () => {
       ? assignment.requirements.targetPostUrl
       : null;
   const manifestUrl = assignment?.manifestUrl ?? null;
+  const endDateLabel = formatEndDate(assignment?.endDate);
   const isLinkedInEngagementSubmission =
     assignment?.jobType === 'social_media_engagement' &&
     assignment.platforms?.[0]?.toLowerCase() === 'linkedin';
@@ -377,6 +394,16 @@ const SolutionForm: React.FC = () => {
                 <Typography variant="body2" color="text.secondary" mt={0.5}>
                   Assignment #{assignmentId}
                 </Typography>
+                {endDateLabel && (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    mt={0.5}
+                    fontWeight={800}
+                  >
+                    Actions should be completed by {endDateLabel}
+                  </Typography>
+                )}
               </Box>
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                 {assignment?.jobType && (

@@ -15,6 +15,7 @@ export type AssignmentDetails = {
   rewardToken: string;
   createdAt: string;
   expiresAt: string;
+  endDate: string;
   updatedAt?: string;
   jobDescription: string;
   manifestUrl: string;
