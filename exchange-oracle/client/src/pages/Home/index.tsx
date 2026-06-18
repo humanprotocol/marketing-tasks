@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Grid, Typography } from '@mui/material';
+import { Box, Grid, Stack, Typography } from '@mui/material';
 import { Outlet } from 'react-router-dom';
 import bagImg from '../../assets/bag.png';
 import humanImg from '../../assets/human.png';
@@ -8,19 +8,19 @@ import { DefaultHeader } from '../../components/Headers/DefaultHeader';
 
 const Home: React.FC = () => {
   return (
-    <Box>
+    <Box sx={{ minHeight: '100vh', background: '#0d0433' }}>
       <DefaultHeader />
       <Box
         sx={{
-          px: { sm: 4, md: 8, xl: 30 },
-          py: { xs: 12, sm: 16, xl: 27 },
+          px: { xs: 3, sm: 4, md: 10 },
+          py: { xs: 12, md: 18 },
           display: 'flex',
           justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
+          alignItems: 'flex-start',
+          minHeight: '100vh',
         }}
       >
-        <Grid container>
+        <Grid container spacing={{ xs: 5, md: 8 }} maxWidth="1504px">
           <Grid item xs={12} sm={12} md={6}>
             <Box
               sx={{
@@ -30,21 +30,47 @@ const Home: React.FC = () => {
                 height: '100%',
               }}
             >
-              <Box sx={{ display: 'flex', alignItmes: 'center', ml: -4 }}>
-                <img src={bagImg} alt="bag" />
-                <img src={userImg} alt="user" />
-                <img src={humanImg} alt="human" />
-              </Box>
+              <Stack direction="row" spacing={1} sx={{ mb: 4 }}>
+                {[bagImg, userImg, humanImg].map((image, index) => (
+                  <Box
+                    key={image}
+                    sx={{
+                      width: 72,
+                      height: 72,
+                      borderRadius: '8px',
+                      background: '#271f4f',
+                      border: '1px solid #3f3569',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      ml: index === 0 ? 0 : -2,
+                    }}
+                  >
+                    <img src={image} alt="" style={{ maxWidth: 56 }} />
+                  </Box>
+                ))}
+              </Stack>
               <Typography
-                color="primary"
-                sx={{ fontWeight: 400, fontSize: '80px', lineHeight: '80px' }}
+                color="text.primary"
+                sx={{
+                  fontWeight: 800,
+                  fontSize: { xs: '44px', sm: '64px', md: '80px' },
+                  lineHeight: 1,
+                }}
               >
                 <b>HUMAN</b>
                 <br />
                 Exchange Oracle
               </Typography>
-              <Typography color="primary" variant="h5" fontWeight={400} my={3}>
-                Solve marketing jobs.
+              <Typography
+                color="text.secondary"
+                variant="h5"
+                fontWeight={600}
+                my={3}
+                maxWidth="520px"
+              >
+                Review the job details, submit the right social proof, and send
+                it for validation.
               </Typography>
             </Box>
           </Grid>

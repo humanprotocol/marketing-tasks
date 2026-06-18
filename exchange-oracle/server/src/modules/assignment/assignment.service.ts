@@ -16,6 +16,7 @@ import { JobRepository } from '../job/job.repository';
 import { JobService } from '../job/job.service';
 import { Web3Service } from '../web3/web3.service';
 import {
+  AssignmentDetailsDto,
   AssignmentDto,
   CreateAssignmentDto,
   GetAssignmentsDto,
@@ -149,27 +150,35 @@ export class AssignmentService {
       });
     const assignments = await Promise.all(
       entities.map(async (entity) => {
-        const assignment = new AssignmentDto(
-          entity.id.toString(),
-          entity.job.escrowAddress,
-          entity.job.chainId,
-          entity.job.jobType,
-          entity.status,
-          entity.rewardAmount,
-          entity.job.rewardToken,
-          entity.createdAt.toISOString(),
-          entity.expiresAt.toISOString(),
-          entity.updatedAt.toISOString(),
-        );
-        if (entity.status === AssignmentStatus.ACTIVE)
-          assignment.url =
-            this.serverConfigService.feURL +
-            '/assignment/' +
-            entity.id.toString();
-        return assignment;
+        return this.toAssignmentDto(entity);
       }),
     );
     return new PageDto(data.page!, data.pageSize!, itemCount, assignments);
+  }
+
+  public async getAssignmentDetails(
+    assignmentId: number,
+  ): Promise<AssignmentDetailsDto> {
+    const entity = await this.assignmentRepository.findOneById(assignmentId);
+
+    if (!entity) {
+      throw new ServerError(ErrorAssignment.NotFound);
+    }
+
+    const manifest = await this.jobService.getManifest(
+      entity.job.chainId,
+      entity.job.escrowAddress,
+      entity.job.manifestUrl,
+    );
+    const assignment = this.toAssignmentDto(entity);
+
+    return new AssignmentDetailsDto(
+      assignment,
+      manifest.campaign.description,
+      entity.job.manifestUrl,
+      manifest.platforms,
+      this.getPublicRequirements(manifest.requirements),
+    );
   }
 
   async resign(assignmentId: number, workerAddress: string): Promise<void> {
@@ -189,5 +198,36 @@ export class AssignmentService {
 
     assignment.status = AssignmentStatus.CANCELED;
     await this.assignmentRepository.updateOne(assignment);
+  }
+
+  private toAssignmentDto(entity: AssignmentEntity): AssignmentDto {
+    const assignment = new AssignmentDto(
+      entity.id.toString(),
+      entity.job.escrowAddress,
+      entity.job.chainId,
+      entity.job.jobType,
+      entity.status,
+      entity.rewardAmount,
+      entity.job.rewardToken,
+      entity.createdAt.toISOString(),
+      entity.expiresAt.toISOString(),
+      entity.updatedAt.toISOString(),
+    );
+
+    if (entity.status === AssignmentStatus.ACTIVE) {
+      assignment.url =
+        this.serverConfigService.feURL + '/assignment/' + entity.id.toString();
+    }
+
+    return assignment;
+  }
+
+  private getPublicRequirements(requirements: object): Record<string, unknown> {
+    const publicRequirements = {
+      ...(requirements as Record<string, unknown>),
+    };
+    delete publicRequirements.xApiCredentials;
+
+    return publicRequirements;
   }
 }

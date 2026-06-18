@@ -9,25 +9,25 @@ const Solution: React.FC = () => {
   const { isConnected } = useAccount();
 
   return (
-    <Box>
+    <Box sx={{ minHeight: '100vh', background: '#0d0433' }}>
       <DefaultHeader />
       <Box
         sx={{
-          px: { sm: 4, md: 8, xl: 30 },
-          py: { xs: 12, sm: 16, xl: 27 },
+          px: { xs: 3, sm: 4, md: 10 },
+          py: { xs: 12, sm: 16 },
           display: 'flex',
           justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
+          alignItems: 'flex-start',
+          minHeight: '100vh',
         }}
       >
         <Container
+          maxWidth="lg"
           sx={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
-            height: '100vh', // Full height of the viewport
+            justifyContent: 'flex-start',
             textAlign: 'center',
           }}
         >
