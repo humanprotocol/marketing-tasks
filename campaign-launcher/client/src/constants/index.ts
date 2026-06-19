@@ -9,11 +9,6 @@ export const ORACLE_ADDRESSES = {
     .VITE_APP_REPUTATION_ORACLE_ADDRESS as EvmAddress,
 };
 
-export const PUBLIC_KEY_SETUP_URL =
-  import.meta.env.VITE_APP_PUBLIC_KEY_SETUP_URL ||
-  import.meta.env.VITE_APP_STAKING_DASHBOARD_URL ||
-  '';
-
 export const MAX_MANIFEST_PREVIEW_LENGTH = 2800;
 
 export const WALLET_PAGE_SIZE = 20;

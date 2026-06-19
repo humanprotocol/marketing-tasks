@@ -2,12 +2,7 @@ import {
   HMToken,
   HMToken__factory,
 } from '@human-protocol/core/typechain-types';
-import {
-  Encryption,
-  EncryptionUtils,
-  EscrowClient,
-  EscrowUtils,
-} from '@human-protocol/sdk';
+import { Encryption, EscrowClient, EscrowUtils } from '@human-protocol/sdk';
 import { Inject, Injectable } from '@nestjs/common';
 import { ethers } from 'ethers';
 
@@ -34,7 +29,7 @@ import {
 } from '../../common/errors';
 import { PageDto } from '../../common/pagination/pagination.dto';
 import { formatAxiosError } from '../../common/utils/http';
-import { downloadFileFromUrl } from '../../common/utils/storage';
+import { downloadFileFromUrl, isValidUrl } from '../../common/utils/storage';
 import { AssignmentEntity } from '../assignment/assignment.entity';
 import { AssignmentRepository } from '../assignment/assignment.repository';
 import { Web3Service } from '../web3/web3.service';
@@ -43,6 +38,15 @@ import { WebhookService } from '../webhook/webhook.service';
 import { GetJobsDto, JobDto, ManifestDto } from './job.dto';
 import { JobEntity } from './job.entity';
 import { JobRepository } from './job.repository';
+
+const isFullPgpMessage = (content: string): boolean => {
+  const trimmedContent = content.trim();
+
+  return (
+    trimmedContent.startsWith('-----BEGIN PGP MESSAGE-----') &&
+    trimmedContent.endsWith('-----END PGP MESSAGE-----')
+  );
+};
 
 @Injectable()
 export class JobService {
@@ -77,11 +81,11 @@ export class JobService {
       signer,
     );
 
-    const manifestUrl = await escrowClient.getManifest(escrowAddress);
+    const manifestSource = await escrowClient.getManifest(escrowAddress);
     const manifest = await this.getManifest(
       chainId,
       escrowAddress,
-      manifestUrl,
+      manifestSource,
     );
     const jobType = manifest.requestType;
 
@@ -91,7 +95,7 @@ export class JobService {
 
     const newJobEntity = new JobEntity();
     newJobEntity.escrowAddress = escrowAddress;
-    newJobEntity.manifestUrl = manifestUrl;
+    newJobEntity.manifestUrl = manifestSource;
     newJobEntity.jobType = jobType;
     newJobEntity.chainId = chainId;
     newJobEntity.rewardToken = await tokenContract.symbol();
@@ -296,28 +300,30 @@ export class JobService {
   public async getManifest(
     chainId: number,
     escrowAddress: string,
-    manifestUrl: string,
+    manifestSource: string,
   ): Promise<ManifestDto> {
     let manifest: ManifestDto | null = null;
 
     try {
-      const manifestEncrypted = await downloadFileFromUrl(manifestUrl);
+      const manifestContent = isValidUrl(manifestSource)
+        ? await downloadFileFromUrl(manifestSource)
+        : manifestSource;
 
       if (
-        typeof manifestEncrypted === 'string' &&
-        EncryptionUtils.isEncrypted(manifestEncrypted)
+        typeof manifestContent === 'string' &&
+        isFullPgpMessage(manifestContent)
       ) {
         const encryption = await Encryption.build(
           this.pgpConfigService.privateKey!,
           this.pgpConfigService.passphrase,
         );
-        const decryptedData = await encryption.decrypt(manifestEncrypted);
+        const decryptedData = await encryption.decrypt(manifestContent);
         manifest = JSON.parse(Buffer.from(decryptedData).toString());
       } else {
         manifest =
-          typeof manifestEncrypted === 'string'
-            ? JSON.parse(manifestEncrypted)
-            : manifestEncrypted;
+          typeof manifestContent === 'string'
+            ? JSON.parse(manifestContent)
+            : manifestContent;
       }
     } catch {
       manifest = null;

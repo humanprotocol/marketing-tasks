@@ -90,7 +90,7 @@ export type SocialMediaEngagementRequirements = {
   checkRepost?: boolean;
   checkQuote?: boolean;
   checkComment?: boolean;
-  xApiCredentials?: XApiCredentials;
+  xApiCredentials?: XApiCredentials | string;
 };
 
 export type ManifestCampaign = {
@@ -124,7 +124,7 @@ export type CampaignManifest =
   | SocialMediaPromotionManifest
   | SocialMediaEngagementManifest;
 
-export type ManifestMode = 'plain' | 'encrypted';
+export type ManifestMode = 'plain' | 'encrypted_credentials';
 
 export type PreparedManifest = {
   manifest: CampaignManifest;
@@ -134,11 +134,10 @@ export type PreparedManifest = {
   encryptionRequired: boolean;
 };
 
-export type PublicKeysState = {
+export type RecordingOracleKeyState = {
   isLoading: boolean;
   error?: string;
-  userPublicKey: string;
-  oraclePublicKeys: string[];
+  publicKey: string;
 };
 
 export type EscrowResult = {

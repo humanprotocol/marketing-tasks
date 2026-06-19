@@ -34,7 +34,7 @@ export interface SocialMediaEngagementRequirements {
   checkRepost?: boolean;
   checkQuote?: boolean;
   checkComment?: boolean;
-  xApiCredentials?: XApiCredentials;
+  xApiCredentials?: XApiCredentials | string;
 }
 
 export type ManifestRequirements =

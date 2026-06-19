@@ -41,8 +41,8 @@ export class JobService {
 
     const signer = this.web3Service.getSigner(chainId);
     const escrowClient = await EscrowClient.build(signer);
-    const manifestUrl = await escrowClient.getManifest(escrowAddress);
-    const manifest = await this.getManifest(manifestUrl);
+    const manifestSource = await escrowClient.getManifest(escrowAddress);
+    const manifest = await this.getManifest(manifestSource);
 
     if (!Object.values(JobRequestType).includes(manifest.requestType)) {
       throw new ValidationError(ErrorJob.InvalidJobType);
@@ -52,7 +52,7 @@ export class JobService {
     job.chainId = chainId;
     job.escrowAddress = escrowAddress;
     job.jobType = manifest.requestType;
-    job.manifestUrl = manifestUrl;
+    job.manifestUrl = manifestSource;
     job.endDate = new Date(manifest.endDate);
 
     return await this.jobRepository.createUnique(job);
@@ -177,9 +177,9 @@ export class JobService {
     return 'Job canceled successfully.';
   }
 
-  async getManifest(manifestUrl: string): Promise<IManifest> {
+  async getManifest(manifestSource: string): Promise<IManifest> {
     return validateManifestDto(
-      (await this.storageService.download(manifestUrl)) as IManifest,
+      (await this.storageService.download(manifestSource)) as IManifest,
     );
   }
 }

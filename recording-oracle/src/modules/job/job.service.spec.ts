@@ -148,6 +148,30 @@ describe('JobService', () => {
         );
         expect(job.manifestUrl).toBe(manifestUrl);
       });
+
+      it('creates a job from an inline escrow manifest', async () => {
+        const manifest = generateManifest();
+        const manifestSource = JSON.stringify(manifest);
+        const escrowClient = {
+          getManifest: jest.fn().mockResolvedValue(manifestSource),
+        };
+
+        jobRepository.findOneByChainIdAndEscrowAddress.mockResolvedValue(null);
+        (EscrowClient.build as jest.Mock).mockResolvedValue(escrowClient);
+        storageService.download.mockResolvedValue(manifest);
+        jobRepository.createUnique.mockImplementation(async (job) => job);
+
+        const job = await jobService.createJob(chainId, escrowAddress);
+
+        expect(storageService.download).toHaveBeenCalledWith(manifestSource);
+        expect(jobRepository.createUnique).toHaveBeenCalledWith(
+          expect.objectContaining({
+            manifestUrl: manifestSource,
+            endDate: new Date(manifest.endDate),
+          }),
+        );
+        expect(job.manifestUrl).toBe(manifestSource);
+      });
     });
 
     describe('fail', () => {
@@ -347,6 +371,20 @@ describe('JobService', () => {
             submissionsRequired: manifest.submissionsRequired,
           }),
         );
+      });
+
+      it('loads and validates an inline manifest source', async () => {
+        const manifest = generateManifest();
+        const manifestSource = JSON.stringify(manifest);
+        storageService.download.mockResolvedValue(manifest);
+
+        await expect(jobService.getManifest(manifestSource)).resolves.toEqual(
+          expect.objectContaining({
+            requestType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
+            submissionsRequired: manifest.submissionsRequired,
+          }),
+        );
+        expect(storageService.download).toHaveBeenCalledWith(manifestSource);
       });
 
       it('validates social media engagement manifests', async () => {

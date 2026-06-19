@@ -1,18 +1,14 @@
 import { EncryptionUtils, KVStoreUtils } from '@human-protocol/sdk';
 import type { ChainId } from '@human-protocol/sdk';
 
-import {
-  ORACLE_ADDRESSES,
-  PUBLIC_KEY_SETUP_URL,
-} from '@/constants';
+import { ORACLE_ADDRESSES } from '@/constants';
 import {
   CampaignRequestType,
   SocialPlatform,
   type CampaignFormState,
   type CampaignManifest,
-  type EvmAddress,
   type PreparedManifest,
-  type PublicKeysState,
+  type RecordingOracleKeyState,
   type SocialMediaEngagementRequirements,
   type SocialMediaPromotionRequirements,
 } from '@/types';
@@ -44,7 +40,17 @@ export const requiresEncryption = (form: CampaignFormState): boolean => {
   );
 };
 
-export const buildManifest = (form: CampaignFormState): CampaignManifest => {
+const getXApiCredentials = (form: CampaignFormState) => ({
+  consumerKey: form.engagement.xApiCredentials.consumerKey.trim(),
+  consumerSecret: form.engagement.xApiCredentials.consumerSecret.trim(),
+  accessToken: form.engagement.xApiCredentials.accessToken.trim(),
+  accessTokenSecret: form.engagement.xApiCredentials.accessTokenSecret.trim(),
+});
+
+export const buildManifest = (
+  form: CampaignFormState,
+  encryptedXApiCredentials?: string,
+): CampaignManifest => {
   const qualifications = splitList(form.qualifications);
   const baseManifest = {
     requestType: form.requestType,
@@ -76,7 +82,7 @@ export const buildManifest = (form: CampaignFormState): CampaignManifest => {
       mustBePublic: form.promotion.mustBePublic,
       ...(optionalNumber(form.promotion.minLiveDurationHours) !== undefined && {
         minLiveDurationHours: optionalNumber(
-          form.promotion.minLiveDurationHours
+          form.promotion.minLiveDurationHours,
         ),
       }),
       ...(optionalNumber(form.promotion.minFollowers) !== undefined && {
@@ -106,17 +112,13 @@ export const buildManifest = (form: CampaignFormState): CampaignManifest => {
   const requirements: SocialMediaEngagementRequirements = {
     targetPostUrl: form.engagement.targetPostUrl.trim(),
     checkLike: form.engagement.checkLike,
-    checkRepost: form.platform === SocialPlatform.X && form.engagement.checkRepost,
-    checkQuote: form.platform === SocialPlatform.X && form.engagement.checkQuote,
+    checkRepost:
+      form.platform === SocialPlatform.X && form.engagement.checkRepost,
+    checkQuote:
+      form.platform === SocialPlatform.X && form.engagement.checkQuote,
     checkComment: form.engagement.checkComment,
     ...(requiresEncryption(form) && {
-      xApiCredentials: {
-        consumerKey: form.engagement.xApiCredentials.consumerKey.trim(),
-        consumerSecret: form.engagement.xApiCredentials.consumerSecret.trim(),
-        accessToken: form.engagement.xApiCredentials.accessToken.trim(),
-        accessTokenSecret:
-          form.engagement.xApiCredentials.accessTokenSecret.trim(),
-      },
+      xApiCredentials: encryptedXApiCredentials ?? getXApiCredentials(form),
     }),
   };
 
@@ -135,40 +137,31 @@ export const calculateHash = async (content: string): Promise<string> => {
     .join('');
 };
 
-export const getPublicKeys = async (
+export const getRecordingOraclePublicKey = async (
   chainId: ChainId,
-  userAddress: EvmAddress,
-  encryptionRequired: boolean
-): Promise<PublicKeysState> => {
+  encryptionRequired: boolean,
+): Promise<RecordingOracleKeyState> => {
   if (!encryptionRequired) {
     return {
       isLoading: false,
-      userPublicKey: '',
-      oraclePublicKeys: [],
+      publicKey: '',
     };
   }
 
   try {
-    const userPublicKey = await KVStoreUtils.getPublicKey(
+    const publicKey = await KVStoreUtils.getPublicKey(
       chainId,
-      userAddress
-    );
-
-    const oracleAddresses = Object.values(ORACLE_ADDRESSES).filter(Boolean);
-    const oraclePublicKeys = await Promise.all(
-      oracleAddresses.map((address) => KVStoreUtils.getPublicKey(chainId, address))
+      ORACLE_ADDRESSES.recordingOracle,
     );
 
     return {
       isLoading: false,
-      userPublicKey,
-      oraclePublicKeys: oraclePublicKeys.filter(Boolean),
+      publicKey,
     };
   } catch (error) {
     return {
       isLoading: false,
-      userPublicKey: '',
-      oraclePublicKeys: [],
+      publicKey: '',
       error: getPublicKeyErrorMessage(error),
     };
   }
@@ -181,9 +174,7 @@ const getPublicKeyErrorMessage = (error: unknown): string => {
       : 'Failed to fetch public keys from KVStore';
 
   if (message.includes('No URL found for the given address and key')) {
-    return PUBLIC_KEY_SETUP_URL
-      ? `Public key not found for this wallet. Set it before launching this campaign: ${PUBLIC_KEY_SETUP_URL}`
-      : 'Public key not found for this wallet. Set it before launching this campaign.';
+    return 'Recording oracle public key not found in KVStore.';
   }
 
   return message;
@@ -191,7 +182,7 @@ const getPublicKeyErrorMessage = (error: unknown): string => {
 
 export const prepareManifest = async (
   form: CampaignFormState,
-  publicKeys: PublicKeysState
+  recordingOracleKey: RecordingOracleKeyState,
 ): Promise<PreparedManifest> => {
   const encryptionRequired = requiresEncryption(form);
   const manifest = buildManifest(form);
@@ -207,37 +198,25 @@ export const prepareManifest = async (
     };
   }
 
-  if (!publicKeys.userPublicKey) {
-    throw new Error(
-      PUBLIC_KEY_SETUP_URL
-        ? `Your wallet public key is missing in KVStore. Set it before launching this campaign: ${PUBLIC_KEY_SETUP_URL}`
-        : 'Your wallet public key is missing in KVStore.'
-    );
+  if (!recordingOracleKey.publicKey) {
+    throw new Error('Recording oracle public key is missing in KVStore.');
   }
 
-  const recipientPublicKeys = [
-    ...publicKeys.oraclePublicKeys,
-    publicKeys.userPublicKey,
-  ];
-
-  if (recipientPublicKeys.length < 4) {
-    throw new Error('Missing one or more recipient public keys for encryption');
-  }
-
-  const encryptedManifest = await EncryptionUtils.encrypt(plainManifestString, [
-    ...new Set(recipientPublicKeys),
-  ]);
-  const encryptedManifestString = JSON.stringify({
-    encrypted: true,
-    encryption: 'pgp',
-    manifest: encryptedManifest,
-  });
+  const encryptedCredentials = await EncryptionUtils.encrypt(
+    JSON.stringify(getXApiCredentials(form)),
+    [recordingOracleKey.publicKey],
+  );
+  const manifestWithEncryptedCredentials = buildManifest(
+    form,
+    encryptedCredentials,
+  );
+  const manifestString = JSON.stringify(manifestWithEncryptedCredentials);
 
   return {
-    manifest,
-    manifestString: encryptedManifestString,
-    manifestHash: await calculateHash(encryptedManifestString),
-    mode: 'encrypted',
+    manifest: manifestWithEncryptedCredentials,
+    manifestString,
+    manifestHash: await calculateHash(manifestString),
+    mode: 'encrypted_credentials',
     encryptionRequired,
   };
 };

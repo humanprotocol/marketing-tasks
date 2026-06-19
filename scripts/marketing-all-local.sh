@@ -7,6 +7,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 PID_EXCHANGE=""
 PID_RECORDING=""
+PID_CAMPAIGN_LAUNCHER=""
 
 run_in_dir() {
   local target_dir="$1"
@@ -54,6 +55,10 @@ run_recording_oracle() {
   run_in_dir "$PROJECT_ROOT/recording-oracle" env NODE_ENV=local yarn start:dev
 }
 
+run_campaign_launcher() {
+  run_in_dir "$PROJECT_ROOT/campaign-launcher/client" yarn start
+}
+
 shutdown() {
   local exit_code="${1:-0}"
 
@@ -70,6 +75,10 @@ shutdown() {
     kill -INT "$PID_RECORDING" 2>/dev/null || true
   fi
 
+  if [ -n "$PID_CAMPAIGN_LAUNCHER" ]; then
+    kill -INT "$PID_CAMPAIGN_LAUNCHER" 2>/dev/null || true
+  fi
+
   sleep 3
 
   if [ -n "$PID_EXCHANGE" ] && kill -0 "$PID_EXCHANGE" 2>/dev/null; then
@@ -78,6 +87,10 @@ shutdown() {
 
   if [ -n "$PID_RECORDING" ] && kill -0 "$PID_RECORDING" 2>/dev/null; then
     kill -KILL "$PID_RECORDING" 2>/dev/null || true
+  fi
+
+  if [ -n "$PID_CAMPAIGN_LAUNCHER" ] && kill -0 "$PID_CAMPAIGN_LAUNCHER" 2>/dev/null; then
+    kill -KILL "$PID_CAMPAIGN_LAUNCHER" 2>/dev/null || true
   fi
 
   echo "Shutdown finished"
@@ -89,6 +102,7 @@ main() {
 
   ensure_file "$PROJECT_ROOT/exchange-oracle/server/.env.local"
   ensure_file "$PROJECT_ROOT/recording-oracle/.env.local"
+  ensure_file "$PROJECT_ROOT/campaign-launcher/client/.env"
 
   setup_oracles
 
@@ -99,6 +113,10 @@ main() {
   echo "Starting Recording Oracle..."
   run_recording_oracle &
   PID_RECORDING=$!
+
+  echo "Starting Campaign Launcher..."
+  run_campaign_launcher &
+  PID_CAMPAIGN_LAUNCHER=$!
 
   echo "Local stack is running. Press Ctrl+C to stop everything."
   wait
