@@ -632,6 +632,23 @@ describe('AssignmentService', () => {
       );
     });
 
+    it('should return details when manifest end date is snake case', async () => {
+      const manifest = {
+        ...createManifest(),
+        endDate: undefined,
+        end_date: 1782129600000,
+      } as unknown as ManifestDto;
+
+      jest
+        .spyOn(assignmentRepository, 'findOneById')
+        .mockResolvedValue(assignmentEntity);
+      jest.spyOn(jobService, 'getManifest').mockResolvedValue(manifest);
+
+      const result = await assignmentService.getAssignmentDetails(assignmentId);
+
+      expect(result.endDate).toBe('2026-06-22T12:00:00.000Z');
+    });
+
     it('should fail with validation error when manifest end date is invalid', async () => {
       const manifest = createManifest({
         endDate: 'not-a-date',

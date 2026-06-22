@@ -85,7 +85,9 @@ export class AssignmentService {
       throw new ValidationError(ErrorAssignment.FullyAssigned);
     }
 
-    const jobEndDate = this.parseManifestEndDate(manifest.endDate);
+    const jobEndDate = this.parseManifestEndDate(
+      this.getManifestEndDate(manifest),
+    );
     const requiredLiveDurationHours =
       manifest.requestType === JobType.SOCIAL_MEDIA_PROMOTION &&
       'minLiveDurationHours' in manifest.requirements
@@ -172,10 +174,14 @@ export class AssignmentService {
     );
     const assignment = this.toAssignmentDto(entity);
 
+    console.log(manifest);
+
     return new AssignmentDetailsDto(
       assignment,
       manifest.campaign.description,
-      this.parseManifestEndDate(manifest.endDate).toISOString(),
+      this.parseManifestEndDate(
+        this.getManifestEndDate(manifest),
+      ).toISOString(),
       entity.job.manifestUrl,
       manifest.platforms,
       this.getPublicRequirements(manifest.requirements),
@@ -232,7 +238,28 @@ export class AssignmentService {
     return publicRequirements;
   }
 
-  private parseManifestEndDate(endDate: number | string): Date {
+  private getManifestEndDate(manifest: unknown): unknown {
+    if (!manifest || typeof manifest !== 'object') {
+      return undefined;
+    }
+
+    const manifestRecord = manifest as Record<string, unknown>;
+    return manifestRecord.endDate ?? manifestRecord.end_date;
+  }
+
+  private parseManifestEndDate(endDate: unknown): Date {
+    if (endDate === null || endDate === undefined) {
+      throw new ValidationError(ErrorAssignment.InvalidEndDate);
+    }
+
+    if (
+      typeof endDate !== 'string' &&
+      typeof endDate !== 'number' &&
+      !(endDate instanceof Date)
+    ) {
+      throw new ValidationError(ErrorAssignment.InvalidEndDate);
+    }
+
     const timestamp =
       typeof endDate === 'string' && endDate.trim() !== ''
         ? Number(endDate)
