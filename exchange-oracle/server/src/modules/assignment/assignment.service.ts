@@ -85,7 +85,7 @@ export class AssignmentService {
       throw new ValidationError(ErrorAssignment.FullyAssigned);
     }
 
-    const jobEndDate = new Date(manifest.endDate);
+    const jobEndDate = this.parseManifestEndDate(manifest.endDate);
     const requiredLiveDurationHours =
       manifest.requestType === JobType.SOCIAL_MEDIA_PROMOTION &&
       'minLiveDurationHours' in manifest.requirements
@@ -175,7 +175,7 @@ export class AssignmentService {
     return new AssignmentDetailsDto(
       assignment,
       manifest.campaign.description,
-      new Date(manifest.endDate).toISOString(),
+      this.parseManifestEndDate(manifest.endDate).toISOString(),
       entity.job.manifestUrl,
       manifest.platforms,
       this.getPublicRequirements(manifest.requirements),
@@ -230,5 +230,19 @@ export class AssignmentService {
     delete publicRequirements.xApiCredentials;
 
     return publicRequirements;
+  }
+
+  private parseManifestEndDate(endDate: number | string): Date {
+    const timestamp =
+      typeof endDate === 'string' && endDate.trim() !== ''
+        ? Number(endDate)
+        : endDate;
+    const date = new Date(timestamp);
+
+    if (Number.isNaN(date.getTime())) {
+      throw new ValidationError(ErrorAssignment.InvalidEndDate);
+    }
+
+    return date;
   }
 }
