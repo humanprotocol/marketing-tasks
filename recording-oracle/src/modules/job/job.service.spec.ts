@@ -1,5 +1,7 @@
 import {
   ChainId,
+  Encryption,
+  EncryptionUtils,
   EscrowClient,
   EscrowStatus,
   EscrowUtils,
@@ -8,6 +10,7 @@ import { faker } from '@faker-js/faker';
 import { Test } from '@nestjs/testing';
 import { ethers } from 'ethers';
 
+import { PGPConfigService } from '../../common/config/pgp-config.service';
 import { Web3ConfigService } from '../../common/config/web3-config.service';
 import { ErrorCommon, ErrorJob } from '../../common/constants/errors';
 import { JobRequestType, JobStatus } from '../../common/enums/job';
@@ -34,6 +37,12 @@ jest.mock('@human-protocol/sdk', () => ({
   EscrowUtils: {
     getEscrow: jest.fn(),
   },
+  Encryption: {
+    build: jest.fn(),
+  },
+  EncryptionUtils: {
+    isEncrypted: jest.fn(),
+  },
 }));
 
 describe('JobService', () => {
@@ -54,6 +63,7 @@ describe('JobService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    (EncryptionUtils.isEncrypted as jest.Mock).mockReturnValue(false);
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -92,6 +102,13 @@ describe('JobService', () => {
             txTimeoutMs: 10_000,
           },
         },
+        {
+          provide: PGPConfigService,
+          useValue: {
+            privateKey: 'private-key',
+            passphrase: 'passphrase',
+          },
+        },
       ],
     }).compile();
 
@@ -122,10 +139,10 @@ describe('JobService', () => {
       });
 
       it('creates a job from a valid escrow manifest', async () => {
-        const manifestUrl = faker.internet.url();
+        const manifestSource = faker.internet.url();
         const manifest = generateManifest();
         const escrowClient = {
-          getManifest: jest.fn().mockResolvedValue(manifestUrl),
+          getManifest: jest.fn().mockResolvedValue(manifestSource),
         };
 
         jobRepository.findOneByChainIdAndEscrowAddress.mockResolvedValue(null);
@@ -142,11 +159,11 @@ describe('JobService', () => {
             chainId,
             escrowAddress,
             jobType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
-            manifestUrl,
+            manifest: manifestSource,
             endDate: new Date(manifest.endDate),
           }),
         );
-        expect(job.manifestUrl).toBe(manifestUrl);
+        expect(job.manifest).toBe(manifestSource);
       });
 
       it('creates a job from an inline escrow manifest', async () => {
@@ -158,19 +175,18 @@ describe('JobService', () => {
 
         jobRepository.findOneByChainIdAndEscrowAddress.mockResolvedValue(null);
         (EscrowClient.build as jest.Mock).mockResolvedValue(escrowClient);
-        storageService.download.mockResolvedValue(manifest);
         jobRepository.createUnique.mockImplementation(async (job) => job);
 
         const job = await jobService.createJob(chainId, escrowAddress);
 
-        expect(storageService.download).toHaveBeenCalledWith(manifestSource);
+        expect(storageService.download).not.toHaveBeenCalled();
         expect(jobRepository.createUnique).toHaveBeenCalledWith(
           expect.objectContaining({
-            manifestUrl: manifestSource,
+            manifest: manifestSource,
             endDate: new Date(manifest.endDate),
           }),
         );
-        expect(job.manifestUrl).toBe(manifestSource);
+        expect(job.manifest).toBe(manifestSource);
       });
     });
 
@@ -376,7 +392,6 @@ describe('JobService', () => {
       it('loads and validates an inline manifest source', async () => {
         const manifest = generateManifest();
         const manifestSource = JSON.stringify(manifest);
-        storageService.download.mockResolvedValue(manifest);
 
         await expect(jobService.getManifest(manifestSource)).resolves.toEqual(
           expect.objectContaining({
@@ -384,7 +399,7 @@ describe('JobService', () => {
             submissionsRequired: manifest.submissionsRequired,
           }),
         );
-        expect(storageService.download).toHaveBeenCalledWith(manifestSource);
+        expect(storageService.download).not.toHaveBeenCalled();
       });
 
       it('validates social media engagement manifests', async () => {
@@ -460,6 +475,41 @@ describe('JobService', () => {
         ).resolves.toEqual(
           expect.objectContaining({
             requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+          }),
+        );
+      });
+
+      it('decrypts encrypted X API credentials before validating a manifest', async () => {
+        const encryptedCredentials =
+          '-----BEGIN PGP MESSAGE-----\ncredentials\n-----END PGP MESSAGE-----';
+        const credentials = {
+          consumerKey: 'consumer-key',
+          consumerSecret: 'consumer-secret',
+          accessToken: 'access-token',
+          accessTokenSecret: 'access-token-secret',
+        };
+        const manifest = generateManifest({
+          requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+          requirements: {
+            targetPostUrl: 'https://x.com/test/status/123',
+            checkLike: true,
+            xApiCredentials: encryptedCredentials as never,
+          },
+        });
+
+        (EncryptionUtils.isEncrypted as jest.Mock).mockReturnValue(true);
+        (Encryption.build as jest.Mock).mockResolvedValue({
+          decrypt: jest.fn().mockResolvedValue(JSON.stringify(credentials)),
+        });
+
+        await expect(
+          jobService.getManifest(JSON.stringify(manifest)),
+        ).resolves.toEqual(
+          expect.objectContaining({
+            requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+            requirements: expect.objectContaining({
+              xApiCredentials: credentials,
+            }),
           }),
         );
       });

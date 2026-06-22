@@ -77,7 +77,7 @@ export class AssignmentService {
     const manifest = await this.jobService.getManifest(
       data.chainId,
       data.escrowAddress,
-      jobEntity.manifestUrl,
+      jobEntity.manifest,
     );
 
     if (currentAssignments >= manifest.submissionsRequired) {

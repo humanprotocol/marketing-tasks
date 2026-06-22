@@ -118,7 +118,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -146,7 +146,7 @@ describe('AssignmentService', () => {
         expect(assignmentRepository.createUnique).toHaveBeenCalledWith({
           job: {
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           },
@@ -181,7 +181,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -212,7 +212,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -266,7 +266,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: differentReputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -284,7 +284,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.CANCELED,
           } as any);
@@ -302,7 +302,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -326,7 +326,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -358,7 +358,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -387,7 +387,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -413,7 +413,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -445,7 +445,7 @@ describe('AssignmentService', () => {
         job: {
           chainId: 1,
           escrowAddress,
-          manifestUrl: MOCK_MANIFEST_URL,
+          manifest: MOCK_MANIFEST_URL,
           jobType: JobType.SOCIAL_MEDIA_PROMOTION,
           rewardToken: 'HMT',
         },

@@ -21,7 +21,7 @@ export class JobEntity extends BaseEntity {
   jobType: JobRequestType;
 
   @Column({ type: 'varchar' })
-  manifestUrl: string;
+  manifest: string;
 
   @Column({ type: 'timestamptz' })
   endDate: Date;

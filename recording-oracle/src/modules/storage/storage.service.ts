@@ -1,6 +1,5 @@
 import {
   ChainId,
-  Encryption,
   EncryptionUtils,
   EscrowClient,
   KVStoreUtils,
@@ -13,18 +12,9 @@ import { PGPConfigService } from '../../common/config/pgp-config.service';
 import { S3ConfigService } from '../../common/config/s3-config.service';
 import { ServerError, ValidationError } from '../../common/errors';
 import { IRecordingResult } from '../../common/interfaces/job';
+import { downloadFileFromUrl } from '../../common/utils/storage';
 import { SaveSolutionsDto } from '../submission/submission.dto';
 import { Web3Service } from '../web3/web3.service';
-import { downloadFileFromUrl, isValidUrl } from '../../common/utils/storage';
-
-const isFullPgpMessage = (content: string): boolean => {
-  const trimmedContent = content.trim();
-
-  return (
-    trimmedContent.startsWith('-----BEGIN PGP MESSAGE-----') &&
-    trimmedContent.endsWith('-----END PGP MESSAGE-----')
-  );
-};
 
 @Injectable()
 export class StorageService {
@@ -50,66 +40,11 @@ export class StorageService {
     }:${this.s3ConfigService.port}/${this.s3ConfigService.bucket}/${hash}.json`;
   }
 
-  public async download(source: string): Promise<any> {
+  public async download(url: string): Promise<any> {
     try {
-      const fileContent = isValidUrl(source)
-        ? await downloadFileFromUrl(source)
-        : source;
-
-      return await this.parseDownloadedContent(fileContent);
+      return await downloadFileFromUrl(url);
     } catch {
       return [];
-    }
-  }
-
-  private async parseDownloadedContent(fileContent: any): Promise<any> {
-    if (typeof fileContent === 'string' && isFullPgpMessage(fileContent)) {
-      return this.decryptJson(fileContent);
-    }
-
-    try {
-      const parsedContent =
-        typeof fileContent === 'string' ? JSON.parse(fileContent) : fileContent;
-      return this.decryptManifestCredentials(parsedContent);
-    } catch {
-      return null;
-    }
-  }
-
-  private async decryptManifestCredentials(content: any): Promise<any> {
-    const encryptedCredentials = content?.requirements?.xApiCredentials;
-
-    if (
-      typeof encryptedCredentials !== 'string' ||
-      !EncryptionUtils.isEncrypted(encryptedCredentials)
-    ) {
-      return content;
-    }
-
-    return {
-      ...content,
-      requirements: {
-        ...content.requirements,
-        xApiCredentials: await this.decryptJson(encryptedCredentials),
-      },
-    };
-  }
-
-  private async decryptJson(encryptedContent: string): Promise<any> {
-    try {
-      const privateKey = this.pgpConfigService.privateKey;
-      if (!privateKey) {
-        throw new ServerError(ErrorStorage.UnableDecryptManifest);
-      }
-      const encryption = await Encryption.build(
-        privateKey,
-        this.pgpConfigService.passphrase,
-      );
-
-      const decryptedData = await encryption.decrypt(encryptedContent);
-      return JSON.parse(Buffer.from(decryptedData).toString());
-    } catch {
-      throw new ServerError(ErrorStorage.UnableDecryptManifest);
     }
   }
 

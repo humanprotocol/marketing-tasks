@@ -29,7 +29,11 @@ import {
 } from '../../common/errors';
 import { PageDto } from '../../common/pagination/pagination.dto';
 import { formatAxiosError } from '../../common/utils/http';
-import { downloadFileFromUrl, isValidUrl } from '../../common/utils/storage';
+import {
+  downloadFileFromUrl,
+  isFullPgpMessage,
+  isValidUrl,
+} from '../../common/utils/storage';
 import { AssignmentEntity } from '../assignment/assignment.entity';
 import { AssignmentRepository } from '../assignment/assignment.repository';
 import { Web3Service } from '../web3/web3.service';
@@ -38,15 +42,6 @@ import { WebhookService } from '../webhook/webhook.service';
 import { GetJobsDto, JobDto, ManifestDto } from './job.dto';
 import { JobEntity } from './job.entity';
 import { JobRepository } from './job.repository';
-
-const isFullPgpMessage = (content: string): boolean => {
-  const trimmedContent = content.trim();
-
-  return (
-    trimmedContent.startsWith('-----BEGIN PGP MESSAGE-----') &&
-    trimmedContent.endsWith('-----END PGP MESSAGE-----')
-  );
-};
 
 @Injectable()
 export class JobService {
@@ -95,7 +90,7 @@ export class JobService {
 
     const newJobEntity = new JobEntity();
     newJobEntity.escrowAddress = escrowAddress;
-    newJobEntity.manifestUrl = manifestSource;
+    newJobEntity.manifest = manifestSource;
     newJobEntity.jobType = jobType;
     newJobEntity.chainId = chainId;
     newJobEntity.rewardToken = await tokenContract.symbol();
@@ -189,7 +184,7 @@ export class JobService {
           const manifest = await this.getManifest(
             entity.chainId,
             entity.escrowAddress,
-            entity.manifestUrl,
+            entity.manifest,
           );
           if (data.fields?.includes(JobFieldName.JobDescription)) {
             job.jobDescription = manifest.campaign.description;

@@ -2,6 +2,7 @@ import { EscrowClient, EscrowStatus, EscrowUtils } from '@human-protocol/sdk';
 import { Injectable } from '@nestjs/common';
 import { ethers } from 'ethers';
 
+import { PGPConfigService } from '../../common/config/pgp-config.service';
 import { Web3ConfigService } from '../../common/config/web3-config.service';
 import { ErrorCommon, ErrorJob } from '../../common/constants/errors';
 import { JobRequestType, JobStatus } from '../../common/enums/job';
@@ -9,6 +10,8 @@ import { VerificationResult } from '../../common/enums/submission';
 import { EventType, WebhookStatus } from '../../common/enums/webhook';
 import { ConflictError, ValidationError } from '../../common/errors';
 import { IManifest, IRecordingResult } from '../../common/interfaces/job';
+import { parseManifestContent } from '../../common/utils/manifest';
+import { isValidUrl } from '../../common/utils/storage';
 import { StorageService } from '../../modules/storage/storage.service';
 import { Web3Service } from '../../modules/web3/web3.service';
 import { WebhookDto } from '../../modules/webhook/webhook.dto';
@@ -27,6 +30,7 @@ export class JobService {
     private readonly web3Service: Web3Service,
     private readonly storageService: StorageService,
     private readonly web3ConfigService: Web3ConfigService,
+    private readonly pgpConfigService: PGPConfigService,
   ) {}
 
   async createJob(chainId: number, escrowAddress: string): Promise<JobEntity> {
@@ -52,7 +56,7 @@ export class JobService {
     job.chainId = chainId;
     job.escrowAddress = escrowAddress;
     job.jobType = manifest.requestType;
-    job.manifestUrl = manifestSource;
+    job.manifest = manifestSource;
     job.endDate = new Date(manifest.endDate);
 
     return await this.jobRepository.createUnique(job);
@@ -178,8 +182,14 @@ export class JobService {
   }
 
   async getManifest(manifestSource: string): Promise<IManifest> {
-    return validateManifestDto(
-      (await this.storageService.download(manifestSource)) as IManifest,
+    const manifestContent = isValidUrl(manifestSource)
+      ? await this.storageService.download(manifestSource)
+      : manifestSource;
+    const manifest = await parseManifestContent(
+      manifestContent,
+      this.pgpConfigService,
     );
+
+    return validateManifestDto(manifest as IManifest);
   }
 }

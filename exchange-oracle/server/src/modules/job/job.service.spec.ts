@@ -1,11 +1,7 @@
 import { faker } from '@faker-js/faker';
 import { createMock } from '@golevelup/ts-jest';
 import { HMToken__factory } from '@human-protocol/core/typechain-types';
-import {
-  Encryption,
-  EscrowClient,
-  EscrowUtils,
-} from '@human-protocol/sdk';
+import { Encryption, EscrowClient, EscrowUtils } from '@human-protocol/sdk';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { ethers } from 'ethers';
@@ -155,7 +151,7 @@ describe('JobService', () => {
         expect(jobRepository.createUnique).toHaveBeenCalledWith({
           chainId,
           escrowAddress,
-          manifestUrl: MOCK_MANIFEST_URL,
+          manifest: MOCK_MANIFEST_URL,
           jobType: JobType.SOCIAL_MEDIA_PROMOTION,
           reputationNetwork,
           rewardToken: 'HMT',
@@ -181,7 +177,7 @@ describe('JobService', () => {
         expect(jobRepository.createUnique).toHaveBeenCalledWith({
           chainId,
           escrowAddress,
-          manifestUrl: MOCK_MANIFEST_URL,
+          manifest: MOCK_MANIFEST_URL,
           jobType: JobType.SOCIAL_MEDIA_ENGAGEMENT,
           reputationNetwork,
           rewardToken: 'HMT',
@@ -215,7 +211,7 @@ describe('JobService', () => {
         );
         expect(jobRepository.createUnique).toHaveBeenCalledWith(
           expect.objectContaining({
-            manifestUrl: manifestSource,
+            manifest: manifestSource,
             jobType: manifest.requestType,
           }),
         );
@@ -400,7 +396,7 @@ describe('JobService', () => {
         jobId: 1,
         chainId: 1,
         escrowAddress,
-        manifestUrl: MOCK_MANIFEST_URL,
+        manifest: MOCK_MANIFEST_URL,
         jobType: JobType.SOCIAL_MEDIA_PROMOTION,
         status: JobStatus.ACTIVE,
         createdAt: new Date(),
