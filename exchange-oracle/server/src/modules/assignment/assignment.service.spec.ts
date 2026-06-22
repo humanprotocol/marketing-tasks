@@ -591,7 +591,7 @@ describe('AssignmentService', () => {
       job: {
         chainId,
         escrowAddress,
-        manifestUrl: MOCK_MANIFEST_URL,
+        manifest: MOCK_MANIFEST_URL,
         jobType: JobType.SOCIAL_MEDIA_PROMOTION,
         rewardToken: 'HMT',
       },
@@ -600,7 +600,7 @@ describe('AssignmentService', () => {
       expiresAt: new Date('2026-01-02T00:00:00.000Z'),
       updatedAt: new Date('2026-01-03T00:00:00.000Z'),
       rewardAmount: 20,
-    } as AssignmentEntity;
+    } as unknown as AssignmentEntity;
 
     afterEach(() => {
       jest.restoreAllMocks();
