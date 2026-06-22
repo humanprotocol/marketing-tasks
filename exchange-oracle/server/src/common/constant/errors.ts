@@ -28,6 +28,7 @@ export enum ErrorAssignment {
   FullyAssigned = 'Fully assigned job',
   ExpiredEscrow = 'Expired escrow',
   InsufficientTimeForLiveDuration = 'Not enough time remains before the job end date to satisfy post duration',
+  InvalidEndDate = 'Invalid assignment job end date',
   JobNotFound = 'Job not found',
   ReputationNetworkMismatch = 'Requested job is not in your reputation network',
 }
