@@ -52,7 +52,7 @@ export const generateJob = (overrides: Partial<JobEntity> = {}): JobEntity =>
     chainId: 80002,
     escrowAddress: faker.finance.ethereumAddress(),
     jobType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
-    manifestUrl: faker.internet.url(),
+    manifest: faker.internet.url(),
     endDate: faker.date.future(),
     status: JobStatus.PENDING,
     retriesCount: 0,

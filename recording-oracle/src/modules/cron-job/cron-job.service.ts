@@ -68,7 +68,7 @@ export class CronJobService {
 
       for (const job of jobs) {
         try {
-          const manifest = await this.jobService.getManifest(job.manifestUrl);
+          const manifest = await this.jobService.getManifest(job.manifest);
           const allResults = await this.submissionService.processSubmissions(
             job.submissions ?? [],
             manifest,

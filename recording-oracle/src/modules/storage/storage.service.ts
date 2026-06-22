@@ -1,6 +1,5 @@
 import {
   ChainId,
-  Encryption,
   EncryptionUtils,
   EscrowClient,
   KVStoreUtils,
@@ -13,9 +12,9 @@ import { PGPConfigService } from '../../common/config/pgp-config.service';
 import { S3ConfigService } from '../../common/config/s3-config.service';
 import { ServerError, ValidationError } from '../../common/errors';
 import { IRecordingResult } from '../../common/interfaces/job';
+import { downloadFileFromUrl } from '../../common/utils/storage';
 import { SaveSolutionsDto } from '../submission/submission.dto';
 import { Web3Service } from '../web3/web3.service';
-import { downloadFileFromUrl } from '../../common/utils/storage';
 
 @Injectable()
 export class StorageService {
@@ -43,36 +42,7 @@ export class StorageService {
 
   public async download(url: string): Promise<any> {
     try {
-      const fileContent = await downloadFileFromUrl(url);
-
-      if (
-        typeof fileContent === 'string' &&
-        EncryptionUtils.isEncrypted(fileContent)
-      ) {
-        try {
-          const privateKey = this.pgpConfigService.privateKey;
-          if (!privateKey) {
-            throw new ServerError(ErrorStorage.UnableDecryptManifest);
-          }
-          const encryption = await Encryption.build(
-            privateKey,
-            this.pgpConfigService.passphrase,
-          );
-
-          const decryptedData = await encryption.decrypt(fileContent);
-          return JSON.parse(Buffer.from(decryptedData).toString());
-        } catch {
-          throw new ServerError(ErrorStorage.UnableDecryptManifest);
-        }
-      } else {
-        try {
-          return typeof fileContent === 'string'
-            ? JSON.parse(fileContent)
-            : fileContent;
-        } catch {
-          return null;
-        }
-      }
+      return await downloadFileFromUrl(url);
     } catch {
       return [];
     }

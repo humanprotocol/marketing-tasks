@@ -78,7 +78,7 @@ export class AssignmentService {
     const manifest = await this.jobService.getManifest(
       data.chainId,
       data.escrowAddress,
-      jobEntity.manifestUrl,
+      jobEntity.manifest,
     );
 
     if (currentAssignments >= manifest.submissionsRequired) {
@@ -170,11 +170,9 @@ export class AssignmentService {
     const manifest = await this.jobService.getManifest(
       entity.job.chainId,
       entity.job.escrowAddress,
-      entity.job.manifestUrl,
+      entity.job.manifest,
     );
     const assignment = this.toAssignmentDto(entity);
-
-    console.log(manifest);
 
     return new AssignmentDetailsDto(
       assignment,
@@ -182,7 +180,7 @@ export class AssignmentService {
       this.parseManifestEndDate(
         this.getManifestEndDate(manifest),
       ).toISOString(),
-      entity.job.manifestUrl,
+      entity.job.manifest,
       manifest.platforms,
       this.getPublicRequirements(manifest.requirements),
     );

@@ -15,7 +15,7 @@ export class JobEntity extends BaseEntity {
   public escrowAddress: string;
 
   @Column({ type: 'varchar', nullable: true })
-  public manifestUrl: string;
+  public manifest: string;
 
   @Column({ type: 'varchar', default: JobType.SOCIAL_MEDIA_PROMOTION })
   public jobType: JobType;
