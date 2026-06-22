@@ -10,15 +10,6 @@ export const isValidUrl = (maybeUrl: string): boolean => {
   }
 };
 
-export const isFullPgpMessage = (content: string): boolean => {
-  const trimmedContent = content.trim();
-
-  return (
-    trimmedContent.startsWith('-----BEGIN PGP MESSAGE-----') &&
-    trimmedContent.endsWith('-----END PGP MESSAGE-----')
-  );
-};
-
 export async function downloadFileFromUrl(url: string): Promise<any> {
   if (!isValidUrl(url)) {
     throw new Error('Invalid URL string');

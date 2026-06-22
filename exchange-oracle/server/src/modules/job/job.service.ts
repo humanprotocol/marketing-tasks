@@ -2,7 +2,7 @@ import {
   HMToken,
   HMToken__factory,
 } from '@human-protocol/core/typechain-types';
-import { Encryption, EscrowClient, EscrowUtils } from '@human-protocol/sdk';
+import { EscrowClient, EscrowUtils } from '@human-protocol/sdk';
 import { Inject, Injectable } from '@nestjs/common';
 import { ethers } from 'ethers';
 
@@ -28,12 +28,9 @@ import {
   ValidationError,
 } from '../../common/errors';
 import { PageDto } from '../../common/pagination/pagination.dto';
+import { decryptJson, isFullPgpMessage } from '../../common/utils/encryption';
 import { formatAxiosError } from '../../common/utils/http';
-import {
-  downloadFileFromUrl,
-  isFullPgpMessage,
-  isValidUrl,
-} from '../../common/utils/storage';
+import { downloadFileFromUrl, isValidUrl } from '../../common/utils/storage';
 import { AssignmentEntity } from '../assignment/assignment.entity';
 import { AssignmentRepository } from '../assignment/assignment.repository';
 import { Web3Service } from '../web3/web3.service';
@@ -308,12 +305,10 @@ export class JobService {
         typeof manifestContent === 'string' &&
         isFullPgpMessage(manifestContent)
       ) {
-        const encryption = await Encryption.build(
-          this.pgpConfigService.privateKey!,
-          this.pgpConfigService.passphrase,
-        );
-        const decryptedData = await encryption.decrypt(manifestContent);
-        manifest = JSON.parse(Buffer.from(decryptedData).toString());
+        manifest = (await decryptJson(
+          manifestContent,
+          this.pgpConfigService,
+        )) as ManifestDto;
       } else {
         manifest =
           typeof manifestContent === 'string'

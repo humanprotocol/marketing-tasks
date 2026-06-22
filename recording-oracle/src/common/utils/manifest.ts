@@ -1,9 +1,7 @@
-import { Encryption, EncryptionUtils } from '@human-protocol/sdk';
+import { EncryptionUtils } from '@human-protocol/sdk';
 
 import type { PGPConfigService } from '../config/pgp-config.service';
-import { ErrorStorage } from '../constants/errors';
-import { ServerError } from '../errors';
-import { isFullPgpMessage } from './storage';
+import { decryptJson, isFullPgpMessage } from './encryption';
 
 export async function parseManifestContent(
   manifestContent: unknown,
@@ -54,25 +52,4 @@ async function decryptManifestCredentials(
       ),
     },
   };
-}
-
-async function decryptJson(
-  encryptedContent: string,
-  pgpConfigService: PGPConfigService,
-): Promise<unknown> {
-  try {
-    const privateKey = pgpConfigService.privateKey;
-    if (!privateKey) {
-      throw new ServerError(ErrorStorage.UnableDecryptManifest);
-    }
-    const encryption = await Encryption.build(
-      privateKey,
-      pgpConfigService.passphrase,
-    );
-
-    const decryptedData = await encryption.decrypt(encryptedContent);
-    return JSON.parse(Buffer.from(decryptedData).toString());
-  } catch {
-    throw new ServerError(ErrorStorage.UnableDecryptManifest);
-  }
 }
