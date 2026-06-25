@@ -724,7 +724,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@human-protocol/core@npm:7.0.0":
+"@human-protocol/core@npm:7.0.0, @human-protocol/core@npm:^7.0.0":
   version: 7.0.0
   resolution: "@human-protocol/core@npm:7.0.0"
   peerDependencies:
@@ -733,14 +733,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@human-protocol/core@npm:^3.0.1":
-  version: 3.0.8
-  resolution: "@human-protocol/core@npm:3.0.8"
-  checksum: 10c0/21b1e397dfd08387967e5004e978f8ade17c24e8fc4fab09f916004e05a35a6673c091ac336de62b66cc6a39309feceaa4696095aa53609f35f0f6b3e8d962ad
-  languageName: node
-  linkType: hard
-
-"@human-protocol/sdk@npm:^7.1.0":
+"@human-protocol/sdk@npm:^7.3.0":
   version: 7.3.0
   resolution: "@human-protocol/sdk@npm:7.3.0"
   dependencies:
@@ -5737,8 +5730,8 @@ __metadata:
     "@emotion/react": "npm:^11.11.3"
     "@emotion/styled": "npm:^11.11.0"
     "@eslint/js": "npm:^10.0.1"
-    "@human-protocol/core": "npm:^3.0.1"
-    "@human-protocol/sdk": "npm:^7.1.0"
+    "@human-protocol/core": "npm:^7.0.0"
+    "@human-protocol/sdk": "npm:^7.3.0"
     "@mui/icons-material": "npm:^5.18.0"
     "@mui/material": "npm:^5.16.7"
     "@reown/appkit": "npm:^1.8.19"

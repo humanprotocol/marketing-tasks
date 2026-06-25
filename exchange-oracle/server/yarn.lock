@@ -641,12 +641,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@human-protocol/core@npm:6.0.0":
-  version: 6.0.0
-  resolution: "@human-protocol/core@npm:6.0.0"
+"@human-protocol/core@npm:7.0.0":
+  version: 7.0.0
+  resolution: "@human-protocol/core@npm:7.0.0"
   peerDependencies:
-    ethers: ~6.15.0
-  checksum: 10c0/10316b23ed6987c75ca1276de85145200bd1190ac8116e5ce6dfad5c427b1b509db63457ba5849fb9c16477264fc521b6737af48cf4700edc968153e1f8e28f2
+    ethers: ~6.16.0
+  checksum: 10c0/b8083fca9b7fab0bca450b7a520cf9f0e8b3af29f4b90fc36ab1d3f24b2ff76aa53f3c3e160f7c40e7079aad6f32ebc67f5abaf8ad75eb77eee808fee7fd3955
   languageName: node
   linkType: hard
 
@@ -662,21 +662,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@human-protocol/sdk@npm:^7.1.0":
-  version: 7.1.0
-  resolution: "@human-protocol/sdk@npm:7.1.0"
+"@human-protocol/sdk@npm:^7.3.0":
+  version: 7.3.0
+  resolution: "@human-protocol/sdk@npm:7.3.0"
   dependencies:
-    "@human-protocol/core": "npm:6.0.0"
+    "@human-protocol/core": "npm:7.0.0"
     axios: "npm:^1.4.0"
     ethers: "npm:~6.16.0"
     graphql: "npm:^16.8.1"
     graphql-request: "npm:^7.3.4"
     graphql-tag: "npm:^2.12.6"
-    openpgp: "npm:^6.2.2"
+    openpgp: "npm:^6.3.0"
     secp256k1: "npm:^5.0.1"
     validator: "npm:^13.12.0"
     vitest: "npm:^4.0.18"
-  checksum: 10c0/8c483aa56f95b95f1a9ea6d6990f19fbb9911bb6792399523cb40cce232361b464a78457c2a60a58572d6b6efe4a1418162e096df344e6397130633c642c0407
+  checksum: 10c0/5835ce09161ab554483c6f9239f9985296491810b28a2f19adb090602c4436732b6787acb875ef2cf3fa9a6ca04ddecc620c52d5829f13a3cec1fd4dc85f1785
   languageName: node
   linkType: hard
 
@@ -4465,7 +4465,7 @@ __metadata:
     "@faker-js/faker": "npm:^9.7.0"
     "@golevelup/ts-jest": "npm:^0.6.1"
     "@human-protocol/logger": "npm:^1.3.0"
-    "@human-protocol/sdk": "npm:^7.1.0"
+    "@human-protocol/sdk": "npm:^7.3.0"
     "@nestjs/axios": "npm:^4.0.1"
     "@nestjs/cli": "npm:^11.0.16"
     "@nestjs/common": "npm:^11.1.12"
@@ -7110,10 +7110,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"openpgp@npm:^6.2.2":
-  version: 6.3.0
-  resolution: "openpgp@npm:6.3.0"
-  checksum: 10c0/0528cb57d7cfd10ef4ab8ce868a0244a4930019d50feed9158028debfd85e5e1a621a4cc5ae254a0b1820a355b12fc7adbe04c950c731d9bb63ca9a9ed44a948
+"openpgp@npm:^6.3.0":
+  version: 6.3.1
+  resolution: "openpgp@npm:6.3.1"
+  peerDependencies:
+    "@openpgp/web-stream-tools": ~0.3.0
+  peerDependenciesMeta:
+    "@openpgp/web-stream-tools":
+      optional: true
+  checksum: 10c0/5c3d3d973219a1c53ca5994720aabdc36312d39ea3199dcf7010d6b20cd46a66ee6289a403697a9d33676e4e5dd4799ddba3396eb08a23a24419711909b635cd
   languageName: node
   linkType: hard
 
