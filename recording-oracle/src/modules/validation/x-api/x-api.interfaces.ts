@@ -48,3 +48,10 @@ export interface XApiErrorResponse {
     status?: number;
   }>;
 }
+
+export type EngagementMatches = {
+  likingUsernames: Set<string>;
+  repostingUsernames: Set<string>;
+  quotingUsernames: Set<string>;
+  commentingUsernames: Set<string>;
+};

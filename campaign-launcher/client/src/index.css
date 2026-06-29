@@ -1,0 +1,23 @@
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 400 800;
+  src: local('Inter');
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #f7f8fc;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}

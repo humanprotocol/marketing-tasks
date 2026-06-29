@@ -21,12 +21,20 @@ export interface SocialMediaPromotionRequirements {
   minReposts?: number;
 }
 
+export interface XApiCredentials {
+  consumerKey: string;
+  consumerSecret: string;
+  accessToken: string;
+  accessTokenSecret: string;
+}
+
 export interface SocialMediaEngagementRequirements {
   targetPostUrl: string;
   checkLike?: boolean;
   checkRepost?: boolean;
   checkQuote?: boolean;
   checkComment?: boolean;
+  xApiCredentials?: XApiCredentials | string;
 }
 
 export type ManifestRequirements =

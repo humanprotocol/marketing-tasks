@@ -1,12 +1,7 @@
 import { faker } from '@faker-js/faker';
 import { createMock } from '@golevelup/ts-jest';
 import { HMToken__factory } from '@human-protocol/core/typechain-types';
-import {
-  Encryption,
-  EncryptionUtils,
-  EscrowClient,
-  EscrowUtils,
-} from '@human-protocol/sdk';
+import { Encryption, EscrowClient, EscrowUtils } from '@human-protocol/sdk';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { ethers } from 'ethers';
@@ -156,7 +151,7 @@ describe('JobService', () => {
         expect(jobRepository.createUnique).toHaveBeenCalledWith({
           chainId,
           escrowAddress,
-          manifestUrl: MOCK_MANIFEST_URL,
+          manifest: MOCK_MANIFEST_URL,
           jobType: JobType.SOCIAL_MEDIA_PROMOTION,
           reputationNetwork,
           rewardToken: 'HMT',
@@ -182,12 +177,45 @@ describe('JobService', () => {
         expect(jobRepository.createUnique).toHaveBeenCalledWith({
           chainId,
           escrowAddress,
-          manifestUrl: MOCK_MANIFEST_URL,
+          manifest: MOCK_MANIFEST_URL,
           jobType: JobType.SOCIAL_MEDIA_ENGAGEMENT,
           reputationNetwork,
           rewardToken: 'HMT',
           status: JobStatus.ACTIVE,
         });
+      });
+
+      it('should create a new job with an inline manifest source', async () => {
+        const manifest = createManifest();
+        const manifestSource = JSON.stringify(manifest);
+        (EscrowClient.build as any).mockResolvedValueOnce({
+          getManifest: jest.fn().mockResolvedValue(manifestSource),
+          getReputationOracleAddress: jest
+            .fn()
+            .mockResolvedValue(reputationNetwork),
+          getTokenAddress: jest.fn().mockResolvedValue(MOCK_ADDRESS),
+        });
+        jest
+          .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
+          .mockResolvedValue(null);
+        const getManifestSpy = jest
+          .spyOn(jobService, 'getManifest')
+          .mockResolvedValue(manifest);
+
+        await jobService.createJob(webhook);
+
+        expect(getManifestSpy).toHaveBeenCalledWith(
+          chainId,
+          escrowAddress,
+          manifestSource,
+        );
+        expect(jobRepository.createUnique).toHaveBeenCalledWith(
+          expect.objectContaining({
+            manifest: manifestSource,
+            jobType: manifest.requestType,
+          }),
+        );
+        getManifestSpy.mockRestore();
       });
     });
 
@@ -368,7 +396,7 @@ describe('JobService', () => {
         jobId: 1,
         chainId: 1,
         escrowAddress,
-        manifestUrl: MOCK_MANIFEST_URL,
+        manifest: MOCK_MANIFEST_URL,
         jobType: JobType.SOCIAL_MEDIA_PROMOTION,
         status: JobStatus.ACTIVE,
         createdAt: new Date(),
@@ -699,10 +727,50 @@ describe('JobService', () => {
         ).resolves.toEqual(manifest);
       });
 
+      it('should return an inline JSON manifest', async () => {
+        const manifest = createManifest();
+
+        await expect(
+          jobService.getManifest(
+            chainId,
+            escrowAddress,
+            JSON.stringify(manifest),
+          ),
+        ).resolves.toEqual(manifest);
+
+        expect(downloadFileFromUrlMock).not.toHaveBeenCalled();
+      });
+
+      it('should return an inline JSON manifest with encrypted X API credentials', async () => {
+        const manifest = {
+          ...createManifest(),
+          requestType: JobType.SOCIAL_MEDIA_ENGAGEMENT,
+          platforms: ['x'],
+          requirements: {
+            targetPostUrl: faker.internet.url(),
+            checkLike: true,
+            xApiCredentials:
+              '-----BEGIN PGP MESSAGE-----\ncontent\n-----END PGP MESSAGE-----',
+          },
+        };
+
+        await expect(
+          jobService.getManifest(
+            chainId,
+            escrowAddress,
+            JSON.stringify(manifest),
+          ),
+        ).resolves.toEqual(manifest);
+
+        expect(Encryption.build).not.toHaveBeenCalled();
+        expect(downloadFileFromUrlMock).not.toHaveBeenCalled();
+      });
+
       it('should decrypt an encrypted manifest', async () => {
         const manifest = createManifest();
-        downloadFileFromUrlMock.mockResolvedValueOnce('encrypted');
-        jest.spyOn(EncryptionUtils, 'isEncrypted').mockReturnValue(true);
+        downloadFileFromUrlMock.mockResolvedValueOnce(
+          '-----BEGIN PGP MESSAGE-----\nencrypted\n-----END PGP MESSAGE-----',
+        );
         (Encryption.build as any).mockResolvedValue({
           decrypt: jest.fn().mockResolvedValue(JSON.stringify(manifest)),
         });

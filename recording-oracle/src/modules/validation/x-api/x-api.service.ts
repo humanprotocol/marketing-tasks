@@ -4,29 +4,19 @@ import { Injectable } from '@nestjs/common';
 import { XApiConfigService } from '../../../common/config/x-api-config.service';
 import { SubmissionRejectionReason } from '../../../common/constants/errors';
 import { ServerError, ValidationError } from '../../../common/errors';
-import { ISocialMediaEngagementManifest } from '../../../common/interfaces/job';
+import {
+  ISocialMediaEngagementManifest,
+  IXApiCredentials,
+} from '../../../common/interfaces/job';
 import { SubmissionEntity } from '../../submission/submission.entity';
 import type { SubmissionValidationResult } from '../validation.service';
 import {
+  EngagementMatches,
   XApiErrorResponse,
   XApiListResponse,
   XApiTweet,
   XApiUser,
 } from './x-api.interfaces';
-
-type EngagementMatches = {
-  likingUsernames: Set<string>;
-  repostingUsernames: Set<string>;
-  quotingUsernames: Set<string>;
-  commentingUsernames: Set<string>;
-};
-
-type XApiCredentials = {
-  consumerKey: string;
-  consumerSecret: string;
-  accessToken: string;
-  accessTokenSecret: string;
-};
 
 @Injectable()
 export class XApiService {
@@ -49,6 +39,7 @@ export class XApiService {
     const targetUsernames = new Set(
       submissions.map((submission) => submission.solution.toLowerCase()),
     );
+    const jobCredentials = manifest.requirements.xApiCredentials;
 
     try {
       const matches: EngagementMatches = {
@@ -59,10 +50,11 @@ export class XApiService {
       };
       let candidates = new Set(targetUsernames);
 
-      if (manifest.requirements.checkLike) {
+      if (manifest.requirements.checkLike && jobCredentials) {
         matches.likingUsernames = await this.getLikingUsernames(
           targetPostId,
           candidates,
+          jobCredentials,
         );
         candidates = this.filterCandidates(candidates, matches.likingUsernames);
       }
@@ -71,6 +63,7 @@ export class XApiService {
         matches.repostingUsernames = await this.getRepostingUsernames(
           targetPostId,
           candidates,
+          jobCredentials,
         );
         candidates = this.filterCandidates(
           candidates,
@@ -82,6 +75,7 @@ export class XApiService {
         matches.quotingUsernames = await this.getQuotingUsernames(
           targetPostId,
           candidates,
+          jobCredentials,
         );
         candidates = this.filterCandidates(
           candidates,
@@ -93,6 +87,7 @@ export class XApiService {
         matches.commentingUsernames = await this.getCommentingUsernames(
           targetPostId,
           candidates,
+          jobCredentials,
         );
       }
 
@@ -121,6 +116,7 @@ export class XApiService {
   getLikingUsernames(
     tweetId: string,
     targetUsernames: Set<string>,
+    credentials?: IXApiCredentials,
   ): Promise<Set<string>> {
     return this.collectPaginatedMatches<XApiUser>(
       `/tweets/${tweetId}/liking_users`,
@@ -129,12 +125,14 @@ export class XApiService {
       {
         'user.fields': 'username,name',
       },
+      credentials,
     );
   }
 
   getRepostingUsernames(
     tweetId: string,
     targetUsernames: Set<string>,
+    credentials?: IXApiCredentials,
   ): Promise<Set<string>> {
     return this.collectPaginatedMatches<XApiUser>(
       `/tweets/${tweetId}/retweeted_by`,
@@ -143,12 +141,14 @@ export class XApiService {
       {
         'user.fields': 'username,name',
       },
+      credentials,
     );
   }
 
   async getCommentingUsernames(
     tweetId: string,
     targetUsernames: Set<string>,
+    credentials?: IXApiCredentials,
   ): Promise<Set<string>> {
     const matches = new Set<string>();
 
@@ -170,6 +170,7 @@ export class XApiService {
           'tweet.fields': 'author_id,conversation_id,referenced_tweets',
           'user.fields': 'username,name',
         },
+        credentials,
       );
 
       for (const userMatch of userMatches) {
@@ -183,6 +184,7 @@ export class XApiService {
   getQuotingUsernames(
     tweetId: string,
     targetUsernames: Set<string>,
+    credentials?: IXApiCredentials,
   ): Promise<Set<string>> {
     return this.collectPaginatedMatches<XApiTweet>(
       `/tweets/${tweetId}/quote_tweets`,
@@ -193,6 +195,7 @@ export class XApiService {
         'tweet.fields': 'author_id,created_at,public_metrics',
         'user.fields': 'username,name',
       },
+      credentials,
     );
   }
 
@@ -201,6 +204,7 @@ export class XApiService {
     targetUsernames: Set<string>,
     getUsername: (item: T, payload: XApiListResponse<T>) => string | undefined,
     endpointParams: Record<string, string> = {},
+    credentials?: IXApiCredentials,
   ): Promise<Set<string>> {
     const matches = new Set<string>();
     let nextToken: string | undefined;
@@ -223,6 +227,7 @@ export class XApiService {
       const payload = await this.xGet<XApiListResponse<T>>(
         endpoint,
         requestParams,
+        credentials,
       );
       for (const item of payload.data ?? []) {
         const username = getUsername(item, payload);
@@ -346,6 +351,7 @@ export class XApiService {
   private async xGet<T>(
     endpoint: string,
     params: Record<string, string>,
+    credentials?: IXApiCredentials,
   ): Promise<T> {
     const url = new URL(`${this.xApiConfigService.baseUrl}${endpoint}`);
     Object.entries(params).forEach(([key, value]) => {
@@ -354,7 +360,11 @@ export class XApiService {
 
     const response = await fetch(url, {
       headers: {
-        Authorization: this.getOAuthAuthorizationHeader('GET', url),
+        Authorization: this.getOAuthAuthorizationHeader(
+          'GET',
+          url,
+          credentials,
+        ),
       },
     });
 
@@ -417,14 +427,18 @@ export class XApiService {
     return errorMessages?.length ? errorMessages.join('; ') : null;
   }
 
-  private getOAuthAuthorizationHeader(method: string, url: URL): string {
-    const credentials = this.getOAuthCredentials();
+  private getOAuthAuthorizationHeader(
+    method: string,
+    url: URL,
+    credentials?: IXApiCredentials,
+  ): string {
+    const oauthCredentials = credentials ?? this.getOAuthCredentials();
     const oauthParams: Record<string, string> = {
-      oauth_consumer_key: credentials.consumerKey,
+      oauth_consumer_key: oauthCredentials.consumerKey,
       oauth_nonce: randomBytes(16).toString('hex'),
       oauth_signature_method: 'HMAC-SHA1',
       oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
-      oauth_token: credentials.accessToken,
+      oauth_token: oauthCredentials.accessToken,
       oauth_version: '1.0',
     };
 
@@ -432,7 +446,7 @@ export class XApiService {
       method,
       url,
       oauthParams,
-      credentials,
+      oauthCredentials,
     );
 
     return `OAuth ${Object.entries(oauthParams)
@@ -448,7 +462,7 @@ export class XApiService {
     method: string,
     url: URL,
     oauthParams: Record<string, string>,
-    credentials: XApiCredentials,
+    credentials: IXApiCredentials,
   ): string {
     const allParams: Array<[string, string]> = [];
 
@@ -489,7 +503,7 @@ export class XApiService {
       .digest('base64');
   }
 
-  private getOAuthCredentials(): XApiCredentials {
+  private getOAuthCredentials(): IXApiCredentials {
     const { consumerKey, consumerSecret, accessToken, accessTokenSecret } =
       this.xApiConfigService;
 

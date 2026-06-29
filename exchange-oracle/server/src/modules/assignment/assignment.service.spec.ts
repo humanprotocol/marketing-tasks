@@ -118,7 +118,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -146,7 +146,7 @@ describe('AssignmentService', () => {
         expect(assignmentRepository.createUnique).toHaveBeenCalledWith({
           job: {
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           },
@@ -181,7 +181,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -212,7 +212,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -266,7 +266,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: differentReputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -284,7 +284,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.CANCELED,
           } as any);
@@ -302,7 +302,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -326,7 +326,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -358,7 +358,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -387,7 +387,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -413,7 +413,7 @@ describe('AssignmentService', () => {
           .spyOn(jobRepository, 'findOneByChainIdAndEscrowAddress')
           .mockResolvedValue({
             id: 1,
-            manifestUrl: MOCK_MANIFEST_URL,
+            manifest: MOCK_MANIFEST_URL,
             reputationNetwork: reputationNetwork,
             status: JobStatus.ACTIVE,
           } as any);
@@ -445,7 +445,7 @@ describe('AssignmentService', () => {
         job: {
           chainId: 1,
           escrowAddress,
-          manifestUrl: MOCK_MANIFEST_URL,
+          manifest: MOCK_MANIFEST_URL,
           jobType: JobType.SOCIAL_MEDIA_PROMOTION,
           rewardToken: 'HMT',
         },
@@ -581,6 +581,87 @@ describe('AssignmentService', () => {
           workerAddress,
         });
       });
+    });
+  });
+
+  describe('getAssignmentDetails', () => {
+    const assignmentId = 3;
+    const assignmentEntity = {
+      id: assignmentId,
+      job: {
+        chainId,
+        escrowAddress,
+        manifest: MOCK_MANIFEST_URL,
+        jobType: JobType.SOCIAL_MEDIA_PROMOTION,
+        rewardToken: 'HMT',
+      },
+      status: AssignmentStatus.ACTIVE,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      expiresAt: new Date('2026-01-02T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-03T00:00:00.000Z'),
+      rewardAmount: 20,
+    } as unknown as AssignmentEntity;
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('should return details when manifest end date is a millisecond timestamp', async () => {
+      const endDate = 1782129600000;
+      const manifest = createManifest({
+        endDate,
+      });
+
+      jest
+        .spyOn(assignmentRepository, 'findOneById')
+        .mockResolvedValue(assignmentEntity);
+      jest.spyOn(jobService, 'getManifest').mockResolvedValue(manifest);
+
+      const result = await assignmentService.getAssignmentDetails(assignmentId);
+
+      expect(result.endDate).toBe('2026-06-22T12:00:00.000Z');
+      expect(result).toEqual(
+        expect.objectContaining({
+          assignmentId: assignmentId.toString(),
+          chainId,
+          escrowAddress,
+          jobDescription: manifest.campaign.description,
+          manifestUrl: MOCK_MANIFEST_URL,
+          platforms: manifest.platforms,
+        }),
+      );
+    });
+
+    it('should return details when manifest end date is snake case', async () => {
+      const manifest = {
+        ...createManifest(),
+        endDate: undefined,
+        end_date: 1782129600000,
+      } as unknown as ManifestDto;
+
+      jest
+        .spyOn(assignmentRepository, 'findOneById')
+        .mockResolvedValue(assignmentEntity);
+      jest.spyOn(jobService, 'getManifest').mockResolvedValue(manifest);
+
+      const result = await assignmentService.getAssignmentDetails(assignmentId);
+
+      expect(result.endDate).toBe('2026-06-22T12:00:00.000Z');
+    });
+
+    it('should fail with validation error when manifest end date is invalid', async () => {
+      const manifest = createManifest({
+        endDate: 'not-a-date',
+      } as unknown as Partial<ManifestDto>);
+
+      jest
+        .spyOn(assignmentRepository, 'findOneById')
+        .mockResolvedValue(assignmentEntity);
+      jest.spyOn(jobService, 'getManifest').mockResolvedValue(manifest);
+
+      await expect(
+        assignmentService.getAssignmentDetails(assignmentId),
+      ).rejects.toThrow(ErrorAssignment.InvalidEndDate);
     });
   });
 

@@ -1,5 +1,7 @@
 import {
   ChainId,
+  Encryption,
+  EncryptionUtils,
   EscrowClient,
   EscrowStatus,
   EscrowUtils,
@@ -8,6 +10,7 @@ import { faker } from '@faker-js/faker';
 import { Test } from '@nestjs/testing';
 import { ethers } from 'ethers';
 
+import { PGPConfigService } from '../../common/config/pgp-config.service';
 import { Web3ConfigService } from '../../common/config/web3-config.service';
 import { ErrorCommon, ErrorJob } from '../../common/constants/errors';
 import { JobRequestType, JobStatus } from '../../common/enums/job';
@@ -34,6 +37,12 @@ jest.mock('@human-protocol/sdk', () => ({
   EscrowUtils: {
     getEscrow: jest.fn(),
   },
+  Encryption: {
+    build: jest.fn(),
+  },
+  EncryptionUtils: {
+    isEncrypted: jest.fn(),
+  },
 }));
 
 describe('JobService', () => {
@@ -54,6 +63,7 @@ describe('JobService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    (EncryptionUtils.isEncrypted as jest.Mock).mockReturnValue(false);
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -92,6 +102,13 @@ describe('JobService', () => {
             txTimeoutMs: 10_000,
           },
         },
+        {
+          provide: PGPConfigService,
+          useValue: {
+            privateKey: 'private-key',
+            passphrase: 'passphrase',
+          },
+        },
       ],
     }).compile();
 
@@ -122,10 +139,10 @@ describe('JobService', () => {
       });
 
       it('creates a job from a valid escrow manifest', async () => {
-        const manifestUrl = faker.internet.url();
+        const manifestSource = faker.internet.url();
         const manifest = generateManifest();
         const escrowClient = {
-          getManifest: jest.fn().mockResolvedValue(manifestUrl),
+          getManifest: jest.fn().mockResolvedValue(manifestSource),
         };
 
         jobRepository.findOneByChainIdAndEscrowAddress.mockResolvedValue(null);
@@ -142,11 +159,34 @@ describe('JobService', () => {
             chainId,
             escrowAddress,
             jobType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
-            manifestUrl,
+            manifest: manifestSource,
             endDate: new Date(manifest.endDate),
           }),
         );
-        expect(job.manifestUrl).toBe(manifestUrl);
+        expect(job.manifest).toBe(manifestSource);
+      });
+
+      it('creates a job from an inline escrow manifest', async () => {
+        const manifest = generateManifest();
+        const manifestSource = JSON.stringify(manifest);
+        const escrowClient = {
+          getManifest: jest.fn().mockResolvedValue(manifestSource),
+        };
+
+        jobRepository.findOneByChainIdAndEscrowAddress.mockResolvedValue(null);
+        (EscrowClient.build as jest.Mock).mockResolvedValue(escrowClient);
+        jobRepository.createUnique.mockImplementation(async (job) => job);
+
+        const job = await jobService.createJob(chainId, escrowAddress);
+
+        expect(storageService.download).not.toHaveBeenCalled();
+        expect(jobRepository.createUnique).toHaveBeenCalledWith(
+          expect.objectContaining({
+            manifest: manifestSource,
+            endDate: new Date(manifest.endDate),
+          }),
+        );
+        expect(job.manifest).toBe(manifestSource);
       });
     });
 
@@ -159,7 +199,9 @@ describe('JobService', () => {
         jobRepository.findOneByChainIdAndEscrowAddress.mockResolvedValue(null);
         (EscrowClient.build as jest.Mock).mockResolvedValue(escrowClient);
         storageService.download.mockResolvedValue(
-          generateManifest({ requestType: 'unsupported' as JobRequestType }),
+          generateManifest({
+            requestType: 'unsupported' as JobRequestType,
+          }),
         );
 
         await expect(
@@ -347,6 +389,19 @@ describe('JobService', () => {
         );
       });
 
+      it('loads and validates an inline manifest source', async () => {
+        const manifest = generateManifest();
+        const manifestSource = JSON.stringify(manifest);
+
+        await expect(jobService.getManifest(manifestSource)).resolves.toEqual(
+          expect.objectContaining({
+            requestType: JobRequestType.SOCIAL_MEDIA_PROMOTION,
+            submissionsRequired: manifest.submissionsRequired,
+          }),
+        );
+        expect(storageService.download).not.toHaveBeenCalled();
+      });
+
       it('validates social media engagement manifests', async () => {
         const manifest = generateManifest({
           requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
@@ -355,6 +410,12 @@ describe('JobService', () => {
             checkLike: true,
             checkRepost: true,
             checkComment: true,
+            xApiCredentials: {
+              consumerKey: 'consumer-key',
+              consumerSecret: 'consumer-secret',
+              accessToken: 'access-token',
+              accessTokenSecret: 'access-token-secret',
+            },
           },
         });
         storageService.download.mockResolvedValue(manifest);
@@ -368,6 +429,91 @@ describe('JobService', () => {
         );
       });
 
+      it('validates like-only engagement manifests with X credentials', async () => {
+        const manifest = generateManifest({
+          requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+          requirements: {
+            targetPostUrl: 'https://x.com/test/status/123',
+            checkLike: true,
+            xApiCredentials: {
+              consumerKey: 'consumer-key',
+              consumerSecret: 'consumer-secret',
+              accessToken: 'access-token',
+              accessTokenSecret: 'access-token-secret',
+            },
+          },
+        });
+        storageService.download.mockResolvedValue(manifest);
+
+        await expect(
+          jobService.getManifest(faker.internet.url()),
+        ).resolves.toEqual(
+          expect.objectContaining({
+            requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+          }),
+        );
+      });
+
+      it('validates engagement manifests with X credentials', async () => {
+        const manifest = generateManifest({
+          requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+          requirements: {
+            targetPostUrl: 'https://x.com/test/status/123',
+            checkLike: true,
+            xApiCredentials: {
+              consumerKey: 'consumer-key',
+              consumerSecret: 'consumer-secret',
+              accessToken: 'access-token',
+              accessTokenSecret: 'access-token-secret',
+            },
+          },
+        });
+        storageService.download.mockResolvedValue(manifest);
+
+        await expect(
+          jobService.getManifest(faker.internet.url()),
+        ).resolves.toEqual(
+          expect.objectContaining({
+            requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+          }),
+        );
+      });
+
+      it('decrypts encrypted X API credentials before validating a manifest', async () => {
+        const encryptedCredentials =
+          '-----BEGIN PGP MESSAGE-----\ncredentials\n-----END PGP MESSAGE-----';
+        const credentials = {
+          consumerKey: 'consumer-key',
+          consumerSecret: 'consumer-secret',
+          accessToken: 'access-token',
+          accessTokenSecret: 'access-token-secret',
+        };
+        const manifest = generateManifest({
+          requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+          requirements: {
+            targetPostUrl: 'https://x.com/test/status/123',
+            checkLike: true,
+            xApiCredentials: encryptedCredentials as never,
+          },
+        });
+
+        (EncryptionUtils.isEncrypted as jest.Mock).mockReturnValue(true);
+        (Encryption.build as jest.Mock).mockResolvedValue({
+          decrypt: jest.fn().mockResolvedValue(JSON.stringify(credentials)),
+        });
+
+        await expect(
+          jobService.getManifest(JSON.stringify(manifest)),
+        ).resolves.toEqual(
+          expect.objectContaining({
+            requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+            requirements: expect.objectContaining({
+              xApiCredentials: credentials,
+            }),
+          }),
+        );
+      });
+
       it('validates quote-only social media engagement manifests', async () => {
         const manifest = generateManifest({
           requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
@@ -377,6 +523,28 @@ describe('JobService', () => {
             checkRepost: false,
             checkQuote: true,
             checkComment: false,
+          },
+        });
+        storageService.download.mockResolvedValue(manifest);
+
+        await expect(
+          jobService.getManifest(faker.internet.url()),
+        ).resolves.toEqual(
+          expect.objectContaining({
+            requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+          }),
+        );
+      });
+
+      it('validates LinkedIn like and comment engagement manifests without X credentials', async () => {
+        const manifest = generateManifest({
+          requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+          platforms: ['linkedin'],
+          requirements: {
+            targetPostUrl:
+              'https://www.linkedin.com/feed/update/urn:li:activity:7353638537595932672/',
+            checkLike: true,
+            checkComment: true,
           },
         });
         storageService.download.mockResolvedValue(manifest);
@@ -411,6 +579,77 @@ describe('JobService', () => {
               targetPostUrl: 'https://x.com/test/status/123',
               checkLike: false,
               checkRepost: false,
+              checkComment: true,
+            },
+          }),
+        );
+
+        await expect(
+          jobService.getManifest(faker.internet.url()),
+        ).rejects.toBeInstanceOf(ValidationError);
+      });
+
+      it('rejects LinkedIn engagement manifests that require reposts or quotes', async () => {
+        storageService.download.mockResolvedValue(
+          generateManifest({
+            requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+            platforms: ['linkedin'],
+            requirements: {
+              targetPostUrl:
+                'https://www.linkedin.com/feed/update/urn:li:activity:7353638537595932672/',
+              checkRepost: true,
+              checkQuote: true,
+            },
+          }),
+        );
+
+        await expect(
+          jobService.getManifest(faker.internet.url()),
+        ).rejects.toThrow(ErrorJob.InvalidManifest);
+      });
+
+      it('rejects engagement manifests with partial X credentials', async () => {
+        storageService.download.mockResolvedValue(
+          generateManifest({
+            requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+            requirements: {
+              targetPostUrl: 'https://x.com/test/status/123',
+              checkLike: true,
+              xApiCredentials: {
+                consumerKey: 'consumer-key',
+              } as never,
+            },
+          }),
+        );
+
+        await expect(
+          jobService.getManifest(faker.internet.url()),
+        ).rejects.toBeInstanceOf(ValidationError);
+      });
+
+      it('rejects engagement manifests that check likes without X credentials', async () => {
+        storageService.download.mockResolvedValue(
+          generateManifest({
+            requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+            requirements: {
+              targetPostUrl: 'https://x.com/test/status/123',
+              checkLike: true,
+            },
+          }),
+        );
+
+        await expect(
+          jobService.getManifest(faker.internet.url()),
+        ).rejects.toBeInstanceOf(ValidationError);
+      });
+
+      it('rejects engagement manifests where comments depend only on skipped likes', async () => {
+        storageService.download.mockResolvedValue(
+          generateManifest({
+            requestType: JobRequestType.SOCIAL_MEDIA_ENGAGEMENT,
+            requirements: {
+              targetPostUrl: 'https://x.com/test/status/123',
+              checkLike: true,
               checkComment: true,
             },
           }),

@@ -8,7 +8,8 @@ export enum ErrorJob {
   InvalidJobType = 'Manifest contains an invalid job type',
   SolutionAlreadyExists = 'Solution already exists',
   InvalidPostUrl = 'Post URL must be a valid x.com status URL',
-  InvalidXUsername = 'X username must be a valid handle',
+  InvalidSocialProfile = 'Social profile must be a valid handle or profile URL',
+  UnsupportedSocialPlatform = 'Social media engagement platform must be x or linkedin',
 }
 
 /**

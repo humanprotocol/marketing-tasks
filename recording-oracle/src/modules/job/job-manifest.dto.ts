@@ -78,6 +78,24 @@ class SocialMediaPromotionRequirementsDto {
   minReposts?: number;
 }
 
+class XApiCredentialsDto {
+  @IsString()
+  @IsNotEmpty()
+  consumerKey!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  consumerSecret!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  accessToken!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  accessTokenSecret!: string;
+}
+
 class SocialMediaEngagementRequirementsDto {
   @IsString()
   @IsNotEmpty()
@@ -98,6 +116,11 @@ class SocialMediaEngagementRequirementsDto {
   @IsOptional()
   @IsBoolean()
   checkComment?: boolean;
+
+  @ValidateNested()
+  @IsOptional()
+  @Type(() => XApiCredentialsDto)
+  xApiCredentials?: XApiCredentialsDto;
 }
 
 class ManifestAiValidationDto {
@@ -193,6 +216,7 @@ export function validateManifestDto(manifest: IManifest): IManifest {
   ) {
     const requirements =
       validatedManifest.requirements as ISocialMediaEngagementRequirements;
+    const platform = validatedManifest.platforms[0]?.toLowerCase();
     const hasAnyEngagementCheck =
       requirements.checkLike ||
       requirements.checkRepost ||
@@ -205,15 +229,39 @@ export function validateManifestDto(manifest: IManifest): IManifest {
       ]);
     }
 
-    if (
-      requirements.checkComment &&
-      !requirements.checkLike &&
-      !requirements.checkRepost &&
-      !requirements.checkQuote
-    ) {
-      throw new ValidationError(ErrorJob.InvalidManifest, undefined, [
-        'checkComment requires checkLike, checkRepost, or checkQuote for social_media_engagement',
-      ]);
+    if (platform === 'linkedin') {
+      if (requirements.checkRepost || requirements.checkQuote) {
+        throw new ValidationError(ErrorJob.InvalidManifest, undefined, [
+          'LinkedIn engagement supports only checkLike and checkComment',
+        ]);
+      }
+
+      return validatedManifest as IManifest;
+    }
+
+    if (platform === 'x') {
+      if (
+        requirements.checkComment &&
+        !(requirements.checkLike && requirements.xApiCredentials) &&
+        !requirements.checkRepost &&
+        !requirements.checkQuote
+      ) {
+        throw new ValidationError(ErrorJob.InvalidManifest, undefined, [
+          'checkComment requires checkRepost, checkQuote, or checkLike with xApiCredentials for social_media_engagement',
+        ]);
+      }
+
+      if (requirements.checkLike && !requirements.xApiCredentials) {
+        throw new ValidationError(ErrorJob.InvalidManifest, undefined, [
+          'xApiCredentials must be provided when checkLike is enabled for social_media_engagement',
+        ]);
+      }
+
+      if (requirements.xApiCredentials && !requirements.checkLike) {
+        throw new ValidationError(ErrorJob.InvalidManifest, undefined, [
+          'xApiCredentials can only be provided when checkLike is enabled for social_media_engagement',
+        ]);
+      }
     }
   }
 

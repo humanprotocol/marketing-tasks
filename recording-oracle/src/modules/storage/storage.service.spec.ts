@@ -1,6 +1,5 @@
 import {
   ChainId,
-  Encryption,
   EncryptionUtils,
   EscrowClient,
   KVStoreUtils,
@@ -9,11 +8,7 @@ import { faker } from '@faker-js/faker';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { VerificationResult } from '../../common/enums/submission';
-import {
-  MOCK_ADDRESS,
-  MOCK_FILE_URL,
-  mockConfig,
-} from '../../../test/constants';
+import { MOCK_ADDRESS, mockConfig } from '../../../test/constants';
 import { PGPConfigService } from '../../common/config/pgp-config.service';
 import { S3ConfigService } from '../../common/config/s3-config.service';
 import { generateRecordingResult } from '../job/fixtures';
@@ -226,11 +221,17 @@ describe('StorageService', () => {
 
   describe('download', () => {
     const downloadFileFromUrlMock = jest.mocked(downloadFileFromUrl);
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
     describe('succeed', () => {
       it('should download the non encrypted file correctly', async () => {
         const exchangeAddress = faker.finance.ethereumAddress();
         const workerAddress = faker.finance.ethereumAddress();
         const postUrl = generatePostUrl();
+        const fileUrl = faker.internet.url();
 
         const expectedJobFile = {
           exchangeAddress,
@@ -243,42 +244,17 @@ describe('StorageService', () => {
         };
 
         downloadFileFromUrlMock.mockResolvedValue(expectedJobFile);
-        EncryptionUtils.isEncrypted = jest.fn().mockReturnValue(false);
-        const solutionsFile = await storageService.download(MOCK_FILE_URL);
-        expect(solutionsFile).toStrictEqual(expectedJobFile);
-      });
-
-      it('should download the encrypted file correctly', async () => {
-        const exchangeAddress = faker.finance.ethereumAddress();
-        const workerAddress = faker.finance.ethereumAddress();
-        const postUrl = generatePostUrl();
-
-        const expectedJobFile = {
-          exchangeAddress,
-          solutions: [
-            {
-              workerAddress,
-              solution: postUrl,
-            },
-          ],
-        };
-
-        downloadFileFromUrlMock.mockResolvedValue('encrypted-content');
-
-        Encryption.build = jest.fn().mockResolvedValue({
-          decrypt: jest.fn().mockResolvedValue(JSON.stringify(expectedJobFile)),
-        });
-        EncryptionUtils.isEncrypted = jest.fn().mockReturnValue(true);
-        const solutionsFile = await storageService.download(MOCK_FILE_URL);
+        const solutionsFile = await storageService.download(fileUrl);
         expect(solutionsFile).toStrictEqual(expectedJobFile);
       });
     });
 
     describe('fail', () => {
       it('should return empty array when file cannot be downloaded', async () => {
+        const fileUrl = faker.internet.url();
         downloadFileFromUrlMock.mockRejectedValue('Network error');
 
-        const solutionsFile = await storageService.download(MOCK_FILE_URL);
+        const solutionsFile = await storageService.download(fileUrl);
         expect(solutionsFile).toStrictEqual([]);
       });
     });

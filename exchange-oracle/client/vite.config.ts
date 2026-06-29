@@ -20,6 +20,11 @@ export default defineConfig({
     commonjsOptions: {
       include: [/node_modules/],
     },
+    rollupOptions: {
+      output: {
+        inlineDynamicImports: true,
+      },
+    },
   },
   server: {
     port: 3003,
